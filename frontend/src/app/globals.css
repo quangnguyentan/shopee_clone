@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+h1, h2, h3, h4, h5, h6, p, span, a, li, ul, ol, button {
+  all: unset;
+  display: revert; 
+}
+
+h1, h2, h3, h4, h5, h6, p, span {
+  font-size: revert;   
+  font-weight: revert;
+  line-height: revert;
+  margin: revert;   
+}
