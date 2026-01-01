@@ -1,9 +1,5 @@
-import dynamic from "next/dynamic";
-
-const Setup2FAClient = dynamic(() => import("./Setup2FAClient"), {
-  ssr: false,
-});
+import ClientWrapper from "./ClientWrapper";
 
 export default function Page() {
-  return <Setup2FAClient />;
+  return <ClientWrapper />;
 }
