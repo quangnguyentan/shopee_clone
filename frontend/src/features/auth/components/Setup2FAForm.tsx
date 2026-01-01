@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import { useSetup2FAMutation, useVerify2FAMutation } from "../api/auth.api";
 import { setAccessToken } from "@/src/common/config/axios";
@@ -12,7 +13,7 @@ export default function Setup2FAForm({ userId }: { userId: number }) {
     try {
       const res = await setup2FA({ userId }).unwrap();
       console.log(res, "res");
-      setQr(res.qr); // đây là base64 image QR code
+      setQr(res.qr);
     } catch (err) {
       console.error(err);
     }
