@@ -2,14 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-h1, h2, h3, h4, h5, h6, p, span, a, li, ul, ol, button {
-  all: unset;
-  display: revert; 
+
+
+body, html {
+    font-family: SHPBurmese,SHPKhmer,Helvetica Neue,Helvetica,Arial,文泉驛正黑,WenQuanYi Zen Hei,Hiragino Sans GB,儷黑 Pro,LiHei Pro,Heiti TC,微軟正黑體,Microsoft JhengHei UI,Microsoft JhengHei,sans-serif;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-h1, h2, h3, h4, h5, h6, p, span {
-  font-size: revert;   
-  font-weight: revert;
-  line-height: revert;
-  margin: revert;   
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
 }
+
+@keyframes loading-dot {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.animate-loading-dot {
+  animation: loading-dot 1.2s infinite ease-in-out;
+}
+
+@keyframes dot-jump {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-6px); }
+}
+
+.animate-loading-dot {
+  animation: dot-jump 1s infinite ease-in-out;
+}
+
+.animate-loading-dot.delay-0 { animation-delay: 0s; }
+.animate-loading-dot.delay-200 { animation-delay: 0.2s; }
+.animate-loading-dot.delay-400 { animation-delay: 0.4s; }

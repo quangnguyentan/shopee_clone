@@ -21,7 +21,7 @@ export class User {
   @Column()
   password: string;
 
-  @Column()
+  @Column({ nullable: true })
   name: string;
 
   @Column({ nullable: true })
@@ -32,6 +32,12 @@ export class User {
 
   @Column({ default: 'buyer' })
   role: 'buyer' | 'seller' | 'admin';
+
+  @Column({ default: false })
+  two_factor_enabled: boolean;
+
+  @Column({ nullable: true })
+  two_factor_secret: string;
 
   @OneToOne(() => Shop, (shop) => shop.user)
   shop: Shop;

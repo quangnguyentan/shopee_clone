@@ -9,7 +9,6 @@ import vi from "../locales/vi.json";
 const messages = { en, vi } as const;
 
 type Language = keyof typeof messages; // "en" | "vi"
-
 type I18nKeys = keyof (typeof messages)[Language];
 
 let currentLang: Language = "vi";
@@ -41,7 +40,6 @@ const i18n = {
 
   get: (key: I18nKeys, values?: Record<string, any>): string => {
     try {
-      console.log(key, "key");
       return intl.formatMessage({ id: key }, values) || key;
     } catch {
       return key;
