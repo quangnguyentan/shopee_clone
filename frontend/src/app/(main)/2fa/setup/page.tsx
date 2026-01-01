@@ -1,11 +1,12 @@
-"use client";
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+export const dynamic = "force-dynamic";
+("use client");
 
 import Setup2FAForm from "@/src/features/auth/components/Setup2FAForm";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export default function Setup2FAPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const userId = Number(searchParams.get("userId"));
 
   if (!userId) {
