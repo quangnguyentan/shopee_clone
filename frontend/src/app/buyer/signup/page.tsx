@@ -1,5 +1,7 @@
+import { RegisterCard } from "@/src/features/auth/components";
+
 const Signup = () => {
-  return <div>Signup</div>;
+  return <RegisterCard />;
 };
 
 export default Signup;

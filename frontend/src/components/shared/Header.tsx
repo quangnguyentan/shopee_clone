@@ -1,22 +1,30 @@
 "use client";
-import logo from "@/src/assest/logo.jpg";
-import Image from "next/image";
 import i18n from "@/src/lib/locale";
-interface HeaderProps {
-  isAuth?: boolean;
-}
-const Header = ({ isAuth = true }: HeaderProps) => {
-  return (
-    <header>
-      {isAuth ? (
-        <div className="flex justify-between items-center px-20">
-          <div className="flex items-center gap-2">
-            <div className="w-[190px] h-[42px] object-cover">
-              <Image src={logo} alt="logo" />
-            </div>
-            <h1 className="font-semibold text-2xl">
-              {i18n.get("pages.auth.header.login.title")}
-            </h1>
+import { useAppSelector } from "@/src/common/hooks/useAppSelector";
+import { useMemo } from "react";
+import { CiSearch, LuShoppingCart, useShopeeLogo } from "./Icon";
+import TopBar from "./TopBar";
+import { FormInput } from "./FormInput";
+import { IconInput } from "./IconInput";
+const Header = () => {
+  const { isAuthenticated } = useAppSelector((s) => s.auth);
+  const { isAuthRoute, location, logo, push } = useShopeeLogo();
+  console.log(isAuthRoute, "isAuthRoute");
+  const renderTitle = useMemo(() => {
+    if (location.includes("/buyer/login")) {
+      return i18n.get("pages.auth.header.login.title");
+    } else {
+      return i18n.get("pages.auth.header.register.title");
+    }
+  }, [location]);
+
+  if (isAuthRoute) {
+    return (
+      <header>
+        <div className="h-20 px-6 lg:px-24 max-w-screen-xl mx-auto flex justify-between items-center">
+          <div className="flex items-center justify-center gap-4">
+            {logo}
+            <h1 className="text-2xl font-normal">{renderTitle}</h1>
           </div>
           <div>
             <span className="text-red-primary">
@@ -24,10 +32,28 @@ const Header = ({ isAuth = true }: HeaderProps) => {
             </span>
           </div>
         </div>
-      ) : (
-        <div className="fixed top-0 left-0 w-full h-[60px] bg-white shadow-md px-6 z-50"></div>
-      )}
-    </header>
+      </header>
+    );
+  }
+  return (
+    <div className="bg-red-primary fixed w-full">
+      <header className="h-[7.4375rem] px-6 lg:px-24 max-w-screen-xl mx-auto flex flex-col ">
+        <TopBar />
+        <div className="flex items-center justify-between">
+          <div className="flex-2">{logo}</div>
+          <div className="flex-6 flex flex-col gap-3">
+            <IconInput
+              endIcon={<CiSearch />}
+              placeholder={i18n.get("pages.home.header.search.placeholder")}
+              className="bg-white rounded-sm py-5 px-3"
+            />
+          </div>
+          <div className="flex-2 flex items-center justify-center">
+            <LuShoppingCart color="white" className="w-7 h-7" />
+          </div>
+        </div>
+      </header>
+    </div>
   );
 };
 
