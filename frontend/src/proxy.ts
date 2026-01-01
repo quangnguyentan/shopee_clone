@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { AUTH_ROUTES, PROTECTED_ROUTES } from "./common/constants";
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const refreshToken = req.cookies.get("refreshToken");
+
   const isAuthRoute = AUTH_ROUTES.some((p) => pathname.startsWith(p));
   const isProtectedRoute = PROTECTED_ROUTES.some((p) => pathname.startsWith(p));
 
