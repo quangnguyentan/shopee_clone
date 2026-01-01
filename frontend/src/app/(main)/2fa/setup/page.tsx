@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
+"use client";
+
 export const dynamic = "force-dynamic";
-("use client");
 
 import Setup2FAForm from "@/src/features/auth/components/Setup2FAForm";
 import { useSearchParams } from "next/navigation";
