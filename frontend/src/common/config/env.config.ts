@@ -8,8 +8,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]),
 });
 
-// Lazy load env, chỉ khi code chạy (không top-level)
 export function getEnv() {
+  // Chỉ parse runtime
   const _env = envSchema.parse({
     NEXT_PUBLIC_RECAPTCHA_SITE_KEY: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
