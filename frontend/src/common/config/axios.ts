@@ -106,8 +106,9 @@ type AxiosBaseQueryArgs = {
 export const axiosBaseQuery =
   (): BaseQueryFn<AxiosBaseQueryArgs, unknown, unknown> =>
   async ({ url, method, data, params }) => {
+    const api = createApi();
     try {
-      const result = await api({ url, method, data, params });
+      const result = await api.request({ url, method, data, params });
       return { data: result.data };
     } catch (axiosError: any) {
       return {
