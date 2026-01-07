@@ -26,7 +26,6 @@ import { SessionModule } from './session/session.module';
 import { AssetModule } from './assets/assets.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-console.log(process.env.NODE_ENV);
 @Module({
   imports: [
     ServeStaticModule.forRoot({
