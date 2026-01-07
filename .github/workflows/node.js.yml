@@ -10,8 +10,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-   frontend-build:
+  frontend-build:
     name: frontend build
     runs-on: ubuntu-latest
 
