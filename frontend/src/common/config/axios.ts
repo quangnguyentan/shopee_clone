@@ -12,6 +12,7 @@ export function createApi() {
    * - withCredentials: gửi HttpOnly cookie (accessToken, refreshToken)
    */
   const env = getEnv();
+  console.log(env.NEXT_PUBLIC_API_URL, "env.NEXT_PUBLIC_API_URL");
   const api = axios.create({
     baseURL: env.NEXT_PUBLIC_API_URL,
     withCredentials: true,
