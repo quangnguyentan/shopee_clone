@@ -1,9 +1,11 @@
 "use client";
-import React, { useState } from "react";
+
+import { useState } from "react";
+import Image from "next/image";
 import {
   useSetup2FAMutation,
   useVerify2FAMutation,
-} from "../../../common/api/auth.api";
+} from "@/src/common/api/auth.api";
 
 export default function Setup2FAForm({ userId }: { userId: number }) {
   const [setup2FA] = useSetup2FAMutation();
@@ -14,7 +16,6 @@ export default function Setup2FAForm({ userId }: { userId: number }) {
   const handleSetup = async () => {
     try {
       const res = await setup2FA({ userId }).unwrap();
-      console.log(res, "res");
       setQr(res.qr);
     } catch (err) {
       console.error(err);
@@ -23,10 +24,9 @@ export default function Setup2FAForm({ userId }: { userId: number }) {
 
   const handleVerify = async () => {
     try {
-      const res = await verify2FA({ userId, token }).unwrap();
-
+      await verify2FA({ userId, token }).unwrap();
       alert("2FA setup success!");
-    } catch (err) {
+    } catch {
       alert("Invalid OTP");
     }
   };
@@ -34,14 +34,13 @@ export default function Setup2FAForm({ userId }: { userId: number }) {
   return (
     <div>
       <button onClick={handleSetup}>Setup 2FA</button>
-
       {qr && (
         <div>
-          <img src={qr} alt="QR Code" />
+          <Image src={qr} alt="QR Code" width={256} height={256} />
           <input
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            placeholder="Enter OTP code"
+            placeholder="Enter OTP"
           />
           <button onClick={handleVerify}>Verify 2FA</button>
         </div>

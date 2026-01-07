@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getEnv } from "../config/env.config";
+import { getEnv } from "../config/env.client";
 
 export function createApi() {
   const env = getEnv();

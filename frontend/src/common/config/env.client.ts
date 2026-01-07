@@ -1,4 +1,3 @@
-// src/common/config/env.client.ts
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -9,17 +8,10 @@ const envSchema = z.object({
 });
 
 export function getEnv() {
-  // Chỉ parse runtime
-  const _env = envSchema.parse({
+  return envSchema.parse({
     NEXT_PUBLIC_RECAPTCHA_SITE_KEY: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL,
     NODE_ENV: process.env.NODE_ENV ?? "development",
   });
-
-  return {
-    ..._env,
-    isDev: _env.NODE_ENV === "development",
-    isProd: _env.NODE_ENV === "production",
-  };
 }

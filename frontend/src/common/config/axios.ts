@@ -4,7 +4,7 @@ import { BaseQueryFn } from "@reduxjs/toolkit/query";
 import { store } from "../storage";
 import { logout } from "@/src/common/storage/auth.slice";
 import { AUTH_EXCLUDE_PATHS } from "../constants";
-import { getEnv } from "./env.config";
+import { getEnv } from "./env.client";
 
 export function createApi() {
   const env = getEnv();

@@ -1,6 +1,6 @@
 // src/common/socket.ts
 import { io } from "socket.io-client";
-import { getEnv } from "./env.config";
+import { getEnv } from "./env.client";
 
 const env = getEnv();
 const BASE_URL = env.NEXT_PUBLIC_API_URL;
