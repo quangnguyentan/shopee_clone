@@ -7,7 +7,7 @@ import { Server, Socket } from 'socket.io';
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Session } from './entities/session.entity';
-
+console.log(process.env.FRONTEND_ENV, 'process.env.FRONTEND_ENV');
 @WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_ENV,
