@@ -5,6 +5,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { SessionActivityInterceptor } from './session/interceptors/session-activity.interceptor';
 
+const FRONTEND_URL = process.env.FRONTEND_ENV;
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useGlobalInterceptors(app.get(SessionActivityInterceptor));
@@ -13,7 +14,7 @@ async function bootstrap() {
   });
   app.use(cookieParser());
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: FRONTEND_URL,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
