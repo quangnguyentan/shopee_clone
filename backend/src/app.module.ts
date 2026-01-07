@@ -37,7 +37,7 @@ import { join } from 'path';
       envFilePath: process.env.NODE_ENV
         ? `.env.${process.env.NODE_ENV}.local`
         : '.env.development.local',
-      ignoreEnvFile: false,
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
