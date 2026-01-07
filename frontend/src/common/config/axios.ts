@@ -4,8 +4,9 @@ import { BaseQueryFn } from "@reduxjs/toolkit/query";
 import { store } from "../storage";
 import { logout } from "@/src/common/storage/auth.slice";
 import { AUTH_EXCLUDE_PATHS } from "../constants";
-import { env } from "./env.config";
+import { getEnv } from "./env.config";
 
+const env = getEnv();
 const BASE_URL = env.NEXT_PUBLIC_API_URL;
 
 /**
