@@ -1,13 +1,14 @@
 import type { NextConfig } from "next";
-import { env } from "./src/common/config/env.config";
-
 const repo = "shopee_clone";
+const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
-  basePath: env.isProd ? `/${repo}` : undefined,
-  assetPrefix: env.isProd ? `/${repo}/` : undefined,
-  images: { unoptimized: true },
-  output: undefined,
+  output: isProd ? "export" : undefined,
+  basePath: isProd ? `/${repo}` : undefined,
+  assetPrefix: isProd ? `/${repo}/` : undefined,
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;
