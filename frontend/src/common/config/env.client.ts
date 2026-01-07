@@ -1,3 +1,4 @@
+// src/common/config/env.client.ts
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -8,6 +9,7 @@ const envSchema = z.object({
 });
 
 export function getEnv() {
+  // chỉ parse runtime, không top-level
   return envSchema.parse({
     NEXT_PUBLIC_RECAPTCHA_SITE_KEY: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,

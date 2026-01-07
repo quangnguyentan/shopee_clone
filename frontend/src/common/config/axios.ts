@@ -7,14 +7,13 @@ import { AUTH_EXCLUDE_PATHS } from "../constants";
 import { getEnv } from "./env.client";
 
 export function createApi() {
-  const env = getEnv();
-  const BASE_URL = env.NEXT_PUBLIC_API_URL;
   /**
    * Axios instance
    * - withCredentials: gửi HttpOnly cookie (accessToken, refreshToken)
    */
+  const env = getEnv();
   const api = axios.create({
-    baseURL: BASE_URL,
+    baseURL: env.NEXT_PUBLIC_API_URL,
     withCredentials: true,
   });
 
