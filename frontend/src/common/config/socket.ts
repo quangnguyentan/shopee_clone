@@ -1,11 +1,11 @@
 // src/common/socket.ts
 import { io } from "socket.io-client";
+import { getEnv } from "./env.client";
 
-export const socket = io(
-  process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:8080",
-  {
-    withCredentials: true,
-    autoConnect: false,
-    transports: ["websocket"],
-  }
-);
+const env = getEnv();
+const BASE_URL = env.NEXT_PUBLIC_API_URL;
+export const socket = io(BASE_URL, {
+  withCredentials: true,
+  autoConnect: false,
+  transports: ["websocket"],
+});

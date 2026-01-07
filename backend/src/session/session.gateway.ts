@@ -10,7 +10,7 @@ import { Session } from './entities/session.entity';
 
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:3000',
+    origin: process.env.FRONTEND_ENV,
     credentials: true,
   },
 })

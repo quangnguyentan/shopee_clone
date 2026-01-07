@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect } from "react";
-import api from "@/src/common/config/axios";
 import { useAppDispatch } from "@/src/common/hooks/useAppSelector";
 import { loginSuccess, finishBootstrap } from "@/src/common/storage/auth.slice";
 import { socket } from "@/src/common/config/socket";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 import { useSingleTabGuard } from "@/src/common/hooks/useSingleTabGuard";
 import { clearMe, setMe } from "@/src/common/storage/user.slice";
 import { useLogoutMutation } from "@/src/common/api/auth.api";
+import { createApi } from "@/src/common/api";
 
 export default function AuthBootstrap({
   children,
@@ -21,6 +21,7 @@ export default function AuthBootstrap({
   const [logout] = useLogoutMutation();
   useEffect(() => {
     const bootstrap = async () => {
+      const api = createApi();
       try {
         const res = await api.post("/auth/refresh");
         dispatch(loginSuccess());

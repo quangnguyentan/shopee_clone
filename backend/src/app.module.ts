@@ -34,7 +34,11 @@ import { join } from 'path';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: [
+        `.env.${process.env.NODE_ENV}.local`,
+        `.env.${process.env.NODE_ENV}`,
+        '.env',
+      ],
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
