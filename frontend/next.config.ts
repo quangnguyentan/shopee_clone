@@ -2,7 +2,7 @@ const repo = "shopee_clone";
 const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig = {
-  // output: 'export',
+  output: "export",
   basePath: isProd ? `/${repo}` : "",
   assetPrefix: isProd ? `/${repo}/` : "",
 
