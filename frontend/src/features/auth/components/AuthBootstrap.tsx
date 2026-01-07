@@ -8,7 +8,6 @@ import { socket } from "@/src/common/config/socket";
 import { toast } from "sonner";
 import { useSingleTabGuard } from "@/src/common/hooks/useSingleTabGuard";
 import { clearMe, setMe } from "@/src/common/storage/user.slice";
-import { useLogoutMutation } from "@/src/common/api/auth.api";
 import { createApi } from "@/src/common/api";
 
 export default function AuthBootstrap({
@@ -18,7 +17,7 @@ export default function AuthBootstrap({
 }) {
   const dispatch = useAppDispatch();
   const blocked = useSingleTabGuard();
-  const [logout] = useLogoutMutation();
+
   useEffect(() => {
     const bootstrap = async () => {
       const api = createApi();

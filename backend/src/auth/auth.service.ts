@@ -146,7 +146,7 @@ export class AuthService {
   }
 
   async logout(sessionId: string, res: Response) {
-    await this.sessionsService.revokeSession(sessionId);
+    await this.sessionsService.revokeSession(sessionId, true);
     await this.refreshRepo.delete({ sessionId });
 
     res.clearCookie('accessToken');
@@ -155,7 +155,7 @@ export class AuthService {
   }
 
   async logoutAll(userId: number, res: Response) {
-    await this.sessionsService.revokeAll(userId);
+    await this.sessionsService.revokeAll(userId, true);
     await this.refreshRepo.delete({ session: { userId } });
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
@@ -195,12 +195,13 @@ export class AuthService {
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 15 * 60 * 1000,
     });
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

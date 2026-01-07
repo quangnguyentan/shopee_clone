@@ -45,7 +45,7 @@ export class SessionsService {
     return await this.sessionRepo.save(session);
   }
 
-  async revokeSession(sessionId: string) {
+  async revokeSession(sessionId: string, revokedBySelf = false) {
     const session = await this.sessionRepo.findOneBy({ id: sessionId });
     if (!session) return;
 
@@ -54,10 +54,13 @@ export class SessionsService {
     await this.sessionRepo.manager.getRepository(RefreshToken).delete({
       sessionId,
     });
-    this.eventEmitter.emit('session.revoked', [session]);
+    this.eventEmitter.emit('session.revoked', {
+      sessions: [session],
+      revokedBySelf,
+    });
   }
 
-  async revokeAll(userId: number) {
+  async revokeAll(userId: number, revokedBySelf = false) {
     const sessions = await this.sessionRepo.find({
       where: { userId, revoked: false },
     });
@@ -73,7 +76,10 @@ export class SessionsService {
       session: { userId },
     });
 
-    this.eventEmitter.emit('session.revoked', sessions);
+    this.eventEmitter.emit('session.revoked', {
+      sessions,
+      revokedBySelf,
+    });
   }
 
   async findById(id: string) {

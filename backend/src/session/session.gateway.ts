@@ -7,7 +7,6 @@ import { Server, Socket } from 'socket.io';
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Session } from './entities/session.entity';
-
 @WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_ENV,
@@ -36,10 +35,15 @@ export class SessionGateway {
   }
 
   @OnEvent('session.revoked')
-  handleSessionRevoked(sessions: Session[]) {
-    sessions.forEach((s) => {
-      this.forceLogoutBySession(s.id);
-    });
+  handleSessionRevoked(payload: {
+    sessions: Session[];
+    revokedBySelf: boolean;
+  }) {
+    const { revokedBySelf, sessions } = payload;
+    if (revokedBySelf)
+      sessions.forEach((s) => {
+        this.forceLogoutBySession(s.id);
+      });
   }
 
   private getSessionRoom(sessionId: string) {

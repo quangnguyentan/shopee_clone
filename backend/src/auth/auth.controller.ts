@@ -70,7 +70,9 @@ export class AuthController {
   @Auth()
   @Post('logout')
   logout(@Req() req, @Res({ passthrough: true }) res: any) {
-    return this.authService.logout(req.user.sessionId, res);
+    const sessionId = req.user?.sessionId;
+    console.log(sessionId, 'sessionId');
+    return this.authService.logout(sessionId, res);
   }
   @Post('2fa/setup')
   setup2FA(@Body() dto: Setup2FADto) {

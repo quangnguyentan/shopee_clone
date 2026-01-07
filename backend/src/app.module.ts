@@ -34,11 +34,10 @@ import { join } from 'path';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [
-        `.env.${process.env.NODE_ENV}.local`,
-        `.env.${process.env.NODE_ENV}`,
-        '.env',
-      ],
+      envFilePath: process.env.NODE_ENV
+        ? `.env.${process.env.NODE_ENV}.local`
+        : '.env.development.local',
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
