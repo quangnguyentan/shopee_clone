@@ -26,7 +26,6 @@ import { SessionModule } from './session/session.module';
 import { AssetModule } from './assets/assets.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-console.log(process.env.NODE_ENV);
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -38,7 +37,7 @@ console.log(process.env.NODE_ENV);
       envFilePath: process.env.NODE_ENV
         ? `.env.${process.env.NODE_ENV}.local`
         : '.env.development.local',
-      ignoreEnvFile: false,
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
