@@ -2,7 +2,7 @@ import { AUTH_ROUTES } from "@/src/common/constants";
 import { useNavigate } from "@/src/common/constants/navigate.constant";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-export { FaFacebook } from "react-icons/fa";
+export { FaFacebook, FaInstagram } from "react-icons/fa";
 export { FcGoogle } from "react-icons/fc";
 export { ImQrcode } from "react-icons/im";
 export { LuEye, LuEyeClosed, LuShoppingCart } from "react-icons/lu";
@@ -10,6 +10,9 @@ export { TbPasswordUser } from "react-icons/tb";
 export { IoReload } from "react-icons/io5";
 export { SiShopee } from "react-icons/si";
 export { CiSearch } from "react-icons/ci";
+export { GrLanguage } from "react-icons/gr";
+export { IoIosNotificationsOutline, IoIosArrowDown } from "react-icons/io";
+export { MdOutlineContactSupport } from "react-icons/md";
 export const useShopeeLogo = () => {
   const location = usePathname();
   const { push } = useNavigate();
@@ -20,7 +23,10 @@ export const useShopeeLogo = () => {
 
   const logo = useMemo(() => {
     return (
-      <div className="w-40 h-16 object-cover" onClick={() => push("/")}>
+      <div
+        className="w-40 h-16 object-cover cursor-pointer"
+        onClick={() => push("/")}
+      >
         <svg
           viewBox="0 0 192 65"
           className={`${

@@ -16,10 +16,14 @@ export const useNavigate = () => {
   const back = () => {
     router.back();
   };
+  const refresh = () => {
+    router.refresh();
+  };
 
   return {
     push,
     replace,
     back,
+    refresh,
   };
 };

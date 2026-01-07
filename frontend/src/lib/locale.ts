@@ -9,7 +9,7 @@ import vi from "../locales/vi.json";
 const messages = { en, vi } as const;
 
 type Language = keyof typeof messages; // "en" | "vi"
-type I18nKeys = keyof (typeof messages)[Language];
+export type I18nKeys = keyof typeof en;
 
 let currentLang: Language = "vi";
 
@@ -29,7 +29,16 @@ const loadIntl = (lang: Language) => {
   );
 };
 
-loadIntl(currentLang);
+if (typeof window !== "undefined") {
+  const savedLang = localStorage.getItem("lang") as Language;
+  if (savedLang && messages[savedLang]) {
+    loadIntl(savedLang);
+  } else {
+    loadIntl(currentLang);
+  }
+} else {
+  loadIntl(currentLang);
+}
 
 const i18n = {
   /**
@@ -48,7 +57,9 @@ const i18n = {
 
   setLanguage: (lang: Language) => {
     loadIntl(lang);
-    localStorage.setItem("lang", lang);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("lang", lang);
+    }
   },
 
   getLanguage: (): Language => currentLang,

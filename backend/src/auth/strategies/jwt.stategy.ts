@@ -10,10 +10,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         ExtractJwt.fromAuthHeaderAsBearerToken(),
         (req) => req?.cookies?.accessToken,
       ]),
-      secretOrKey: process.env.JWT_SECRET_KEY || '',
+      secretOrKey: process.env.JWT_ACCESS_SECRET || '',
     });
   }
   async validate(payload: any) {
-    return { userId: payload.sub, username: payload.username };
+    return {
+      userId: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      sessionId: payload.sessionId,
+    };
   }
 }
