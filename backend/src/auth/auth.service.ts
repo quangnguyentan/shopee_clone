@@ -1,205 +1,231 @@
-import { HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import * as QRCode from 'qrcode';
-import * as bcrypt from 'bcrypt';
-import * as speakeasy from 'speakeasy';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from '@/user/entities/user.entity';
 import { Repository } from 'typeorm';
-import { JwtService } from '@nestjs/jwt';
-import { RegisterDto } from './dto/register.dto';
+import { User } from '@/user/entities/user.entity';
+import { RefreshToken } from './entities/refresh-token.entity';
+import { SessionsService } from '@/session/session.service';
+import { Session } from '@/session/entities/session.entity';
 import { Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import * as QRCode from 'qrcode';
+import * as speakeasy from 'speakeasy';
+import { randomUUID } from 'crypto';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyToken,
+} from '@/middleware/jwt';
 import { AppException } from '@/common/exceptions/app.exception';
 import { AUTH_ERROR } from '@/common/errors/auth.error';
-const qrSessions = new Map<
-  string,
-  {
-    status: 'PENDING' | 'VERIFIED';
-    userId: string | null;
-    createdAt: number;
-  }
->();
+import { RegisterDto } from './dto/register.dto';
+import { generateFromEmail } from 'unique-username-generator';
+import { AVATAR_DEFAULT } from '@/common/constant/asset.constant';
 
 const QR_EXPIRE_MS = 60 * 1000;
+const qrSessions = new Map<
+  string,
+  { status: 'PENDING' | 'VERIFIED'; userId: string | null; createdAt: number }
+>();
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(RefreshToken)
+    private readonly refreshRepo: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
+    private readonly sessionsService: SessionsService,
   ) {}
+
   async getQRCode() {
     const sessionId = randomUUID();
-
     qrSessions.set(sessionId, {
       status: 'PENDING',
       userId: null,
       createdAt: Date.now(),
     });
-
-    const qrPayload = `login:${sessionId}`;
-    const qr = await QRCode.toDataURL(qrPayload);
-
+    const qr = await QRCode.toDataURL(`login:${sessionId}`);
     return { qr, sessionId };
   }
 
   verifyQRCode(sessionId: string, userId: string) {
     const session = qrSessions.get(sessionId);
-
-    if (!session) {
-      throw new AppException(AUTH_ERROR.QR_EXPIRED);
-    }
-
-    if (Date.now() - session.createdAt > QR_EXPIRE_MS) {
+    if (!session || Date.now() - session.createdAt > QR_EXPIRE_MS) {
       qrSessions.delete(sessionId);
       throw new AppException(AUTH_ERROR.QR_EXPIRED);
     }
-
     session.status = 'VERIFIED';
     session.userId = userId;
-
     return { success: true };
   }
 
   checkQRStatus(sessionId: string) {
     const session = qrSessions.get(sessionId);
-
-    if (!session) {
-      return { status: 'EXPIRED' };
-    }
-    console.log(Date.now() - session.createdAt, 'createdAt');
-    console.log(QR_EXPIRE_MS, 'qr');
-    if (Date.now() - session.createdAt > QR_EXPIRE_MS) {
+    if (!session || Date.now() - session.createdAt > QR_EXPIRE_MS) {
       qrSessions.delete(sessionId);
       return { status: 'EXPIRED' };
     }
-
-    if (session.status === 'VERIFIED') {
-      return {
-        status: 'VERIFIED',
-        userId: session.userId,
-      };
-    }
-
-    return { status: 'PENDING' };
-  }
-
-  async validatePassword(password: string, hash: string) {
-    return bcrypt.compare(password, hash);
+    return session.status === 'VERIFIED'
+      ? { status: 'VERIFIED', userId: session.userId }
+      : { status: 'PENDING' };
   }
 
   async register(dto: RegisterDto) {
-    const exists = await this.userRepo.findOne({
-      where: { email: dto.email },
-    });
-
-    if (exists) {
-      throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
-    }
+    const exists = await this.userRepo.findOne({ where: { email: dto.email } });
+    if (exists) throw new AppException(AUTH_ERROR.USER_ALREADY_EXISTS);
 
     const hash = await bcrypt.hash(dto.password, 10);
-
     const user = this.userRepo.create({
       email: dto.email,
-      name: dto.name,
+      name: generateFromEmail(dto.email, {
+        randomDigits: 2,
+        stripLeadingDigits: true,
+      }),
       password: hash,
       two_factor_enabled: false,
+      avatar: AVATAR_DEFAULT,
     });
-
     await this.userRepo.save(user);
-
-    return {
-      message: 'Register success',
-      userId: user.id,
-    };
+    return { message: 'Register success', userId: user.id };
   }
-  async refreshToken(refreshToken: string, res: Response) {
+
+  async login(
+    identifier: string,
+    password: string,
+    userAgent: string,
+    ip: string,
+    res: Response,
+  ) {
+    const user = await this.userRepo.findOne({ where: { email: identifier } });
+    if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) throw new AppException(AUTH_ERROR.INVALID_PASSWORD);
+
+    if (user.two_factor_enabled) return { require2FA: true, userId: user.id };
+
+    const deviceType = this.getDeviceType(userAgent);
+    const session = await this.sessionsService.createSession({
+      userId: user.id,
+      ip,
+      deviceType,
+      userAgent,
+    });
+    return await this.issueTokens(user, session.id, res);
+  }
+
+  async refreshToken(oldToken: string, res: Response) {
+    let payload: any;
     try {
-      const payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_SECRET_KEY,
-      });
-      const user = await this.userRepo.findOneBy({ id: payload.sub });
-      if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
-      return this.issueTokens(user, res);
+      payload = verifyToken(oldToken);
     } catch {
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
-  }
-  logout(res: Response) {
-    res.clearCookie('refreshToken', { httpOnly: true, sameSite: 'strict' });
-    return { message: 'Logged out' };
+
+    const token = await this.refreshRepo.findOne({
+      where: { jti: payload.jti, revoked: false },
+    });
+    if (!token) throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
+
+    const isMatch = await bcrypt.compare(oldToken, token.token_hash);
+    if (!isMatch) throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
+
+    const session = await this.sessionsService.findById(token.sessionId);
+
+    if (!session || session.revoked) {
+      await this.refreshRepo.delete({ id: token.id });
+      throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
+    }
+    const user = await this.userRepo.findOneBy({ id: session.userId });
+    if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+
+    await this.refreshRepo.delete({ id: token.id });
+
+    return this.issueTokens(user, session.id, res);
   }
 
-  async login(identifier: string, password: string, res: Response) {
-    const user = await this.userRepo.findOne({
-      where: { email: identifier },
+  async logout(sessionId: string, res: Response) {
+    await this.sessionsService.revokeSession(sessionId);
+    await this.refreshRepo.delete({ sessionId });
+
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+    return { success: true };
+  }
+
+  async logoutAll(userId: number, res: Response) {
+    await this.sessionsService.revokeAll(userId);
+    await this.refreshRepo.delete({ session: { userId } });
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+    return { success: true };
+  }
+
+  private getDeviceType(userAgent: string): 'mobile' | 'desktop' {
+    return /mobile|android|iphone|ipad/i.test(userAgent) ? 'mobile' : 'desktop';
+  }
+  private buildAuthResponse(user: User, sessionId: string) {
+    return {
+      authenticated: true,
+      sessionId,
+      user: {
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar,
+      },
+    };
+  }
+
+  private async issueTokens(user: User, sessionId: string, res: Response) {
+    const accessToken = generateAccessToken(user, sessionId);
+    const { token: refreshToken, jti } = generateRefreshToken(user);
+    const tokenHash = await bcrypt.hash(refreshToken, 10);
+    await this.refreshRepo.manager.transaction(async (manager) => {
+      await manager.delete(RefreshToken, { sessionId });
+      const newToken = manager.create(RefreshToken, {
+        sessionId,
+        token_hash: tokenHash,
+        revoked: false,
+        jti,
+      });
+      await manager.save(newToken);
     });
 
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    const ok = await this.validatePassword(password, user.password);
-    if (!ok) {
-      throw new UnauthorizedException('Invalid password');
-    }
-
-    if (user.two_factor_enabled) {
-      return {
-        require2FA: true,
-        userId: user.id,
-      };
-    }
-
-    return this.issueTokens(user, res);
-  }
-
-  issueTokens(user: User, res: Response) {
-    const accessToken = this.jwtService.sign(
-      { sub: user.id, email: user.email },
-      { expiresIn: '15m' },
-    );
-
-    const refreshToken = this.jwtService.sign(
-      { sub: user.id },
-      { expiresIn: '7d' },
-    );
-
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000,
+    });
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return { accessToken };
+    return this.buildAuthResponse(user, sessionId);
   }
 
   async setup2FA(userId: number) {
     const user = await this.userRepo.findOneBy({ id: userId });
-    if (!user) throw new UnauthorizedException();
+    if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
     const secret = speakeasy.generateSecret({
       length: 20,
       name: `(${user.email})`,
     });
-
     user.two_factor_secret = secret.base32;
     await this.userRepo.save(user);
 
     const qr = await QRCode.toDataURL(secret.otpauth_url);
-
-    return {
-      qr,
-      secret: secret.base32,
-    };
+    return { qr, secret: secret.base32 };
   }
 
   async verify2FA(userId: number, token: string, res: Response) {
     const user = await this.userRepo.findOneBy({ id: userId });
-    if (!user || !user.two_factor_secret) {
-      throw new UnauthorizedException();
-    }
+    if (!user || !user.two_factor_secret)
+      throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
     const verified = speakeasy.totp.verify({
       secret: user.two_factor_secret,
@@ -207,47 +233,41 @@ export class AuthService {
       token,
       window: 1,
     });
-
-    if (!verified) {
-      throw new UnauthorizedException('Invalid OTP');
-    }
+    if (!verified) throw new AppException(AUTH_ERROR.INVALID_OTP);
 
     user.two_factor_enabled = true;
     await this.userRepo.save(user);
 
-    return this.issueTokens(user, res);
+    const session = await this.sessionsService.createSession({
+      userId: user.id,
+      ip: '2FA',
+      deviceType: 'desktop',
+    });
+    return this.issueTokens(user, session.id, res);
   }
+
   async requestChangePassword(userId: number) {
     const user = await this.userRepo.findOneBy({ id: userId });
-    if (!user) throw new UnauthorizedException();
+    if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
-    if (user.two_factor_enabled) {
-      return {
-        require2FA: true,
-        action: 'CHANGE_PASSWORD',
-      };
-    }
+    if (user.two_factor_enabled)
+      return { require2FA: true, action: 'CHANGE_PASSWORD' };
 
-    // (không khuyến nghị, nhưng cho đủ case)
     const actionToken = this.jwtService.sign(
       { sub: user.id, action: 'CHANGE_PASSWORD' },
-      { expiresIn: '5m' },
+      { secret: process.env.JWT_ACTION_SECRET, expiresIn: '5m' },
     );
-
-    return {
-      require2FA: false,
-      actionToken,
-    };
+    return { require2FA: false, actionToken };
   }
+
   async verify2FAForAction(
     userId: number,
     action: 'CHANGE_PASSWORD',
     otp: string,
   ) {
     const user = await this.userRepo.findOneBy({ id: userId });
-    if (!user || !user.two_factor_secret) {
-      throw new UnauthorizedException();
-    }
+    if (!user || !user.two_factor_secret)
+      throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
     const verified = speakeasy.totp.verify({
       secret: user.two_factor_secret,
@@ -255,41 +275,38 @@ export class AuthService {
       token: otp,
       window: 1,
     });
-
-    if (!verified) {
-      throw new UnauthorizedException('Invalid OTP');
-    }
+    if (!verified) throw new AppException(AUTH_ERROR.INVALID_OTP);
 
     const actionToken = this.jwtService.sign(
-      {
-        sub: user.id,
-        action,
-      },
-      { expiresIn: '5m' },
+      { sub: user.id, action },
+      { secret: process.env.JWT_ACTION_SECRET, expiresIn: '5m' },
     );
-
     return { actionToken };
   }
+
   async changePassword(actionToken: string, newPassword: string) {
     let payload: any;
-
     try {
       payload = this.jwtService.verify(actionToken, {
-        secret: process.env.JWT_SECRET_KEY,
+        secret: process.env.JWT_ACTION_SECRET,
       });
     } catch {
-      throw new UnauthorizedException('Invalid or expired action token');
+      throw new AppException(AUTH_ERROR.UNAUTHORIZED);
     }
 
-    if (payload.action !== 'CHANGE_PASSWORD') {
-      throw new UnauthorizedException('Invalid action');
-    }
+    if (payload.action !== 'CHANGE_PASSWORD')
+      throw new AppException(AUTH_ERROR.UNAUTHORIZED);
 
     const user = await this.userRepo.findOneBy({ id: payload.sub });
-    if (!user) throw new UnauthorizedException();
+    if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
     user.password = await bcrypt.hash(newPassword, 10);
     await this.userRepo.save(user);
+
+    await this.refreshRepo.delete({
+      session: { userId: user.id },
+      revoked: false,
+    });
 
     return { message: 'Password changed successfully' };
   }

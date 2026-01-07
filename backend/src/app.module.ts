@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { envConfig } from './config/env.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
@@ -23,28 +22,39 @@ import { ShippingModule } from './shipping/shipping.module';
 import { VoucherModule } from './voucher/voucher.module';
 import { AddressModule } from './address/address.module';
 import { ChatMessageModule } from './chat-message/chat-message.module';
-
+import { SessionModule } from './session/session.module';
+import { AssetModule } from './assets/assets.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'public'),
+      serveRoot: '/',
+    }),
     ConfigModule.forRoot({
-      ...envConfig('.env'),
+      isGlobal: true,
+      envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        url: config.get<string>('DATABASE_URL'),
-        autoLoadEntities: true,
-        synchronize: true,
-        logging: true,
-        ssl: {
-          rejectUnauthorized: false,
-        },
-        extra: {
-          max: 5,
-          connectionTimeoutMillis: 5000,
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const url = config.get<string>('DATABASE_URL');
+        return {
+          type: 'postgres',
+          url,
+          autoLoadEntities: true,
+          synchronize: true,
+          extra: {
+            max: 1,
+            idleTimeoutMillis: 0,
+            connectionTimeoutMillis: 15000,
+          },
+          ssl: {
+            rejectUnauthorized: false,
+          },
+        };
+      },
     }),
     AuthModule,
     UserModule,
@@ -65,6 +75,8 @@ import { ChatMessageModule } from './chat-message/chat-message.module';
     VoucherModule,
     AddressModule,
     ChatMessageModule,
+    SessionModule,
+    AssetModule,
   ],
   controllers: [AppController],
   providers: [AppService],
