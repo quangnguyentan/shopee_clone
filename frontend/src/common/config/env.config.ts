@@ -9,14 +9,18 @@ const envSchema = z.object({
 
 const _env = envSchema.parse({
   NEXT_PUBLIC_RECAPTCHA_SITE_KEY:
-    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ||
-    (process.env.NODE_ENV === "development" ? "dev-key" : ""),
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ??
+    (process.env.NODE_ENV === "development" ? "dev-key" : undefined),
   NEXT_PUBLIC_API_URL:
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === "development" ? "http://localhost:8080" : ""),
+    process.env.NEXT_PUBLIC_API_URL ??
+    (process.env.NODE_ENV === "development"
+      ? "http://localhost:8080"
+      : undefined),
   NEXT_PUBLIC_SOCKET_URL:
-    process.env.NEXT_PUBLIC_SOCKET_URL ||
-    (process.env.NODE_ENV === "development" ? "http://localhost:8080" : ""),
+    process.env.NEXT_PUBLIC_SOCKET_URL ??
+    (process.env.NODE_ENV === "development"
+      ? "http://localhost:8080"
+      : undefined),
   NODE_ENV: process.env.NODE_ENV ?? "development",
 });
 
