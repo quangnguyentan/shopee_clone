@@ -2,18 +2,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import CultureProvider from "../common/provider/CultureProvider";
-import Header from "../components/shared/Header";
 import ClientProvider from "../common/provider/ClientProvider";
 import { AuthBootstrap } from "../features/auth/components";
-import AuthProvider from "../common/provider/AuthProvider";
 import { Toaster } from "sonner";
+import ProtectedLayout from "../components/shared/ProtectedLayout";
 export const metadata: Metadata = {
-  title: "Instagram",
-  description: "Instagram clone",
-  icons: {
-    icon: "instagram.ico",
-    shortcut: "instagram.ico",
-  },
+  title: "Shopee Việt Nam | Mua sắm online",
 };
 export default function RootLayout({
   children,
@@ -26,11 +20,10 @@ export default function RootLayout({
         <ClientProvider>
           <AuthBootstrap>
             <CultureProvider>
-              <AuthProvider>
+              <ProtectedLayout>
                 <Toaster richColors position="top-center" />
-                <Header />
                 {children}
-              </AuthProvider>
+              </ProtectedLayout>
             </CultureProvider>
           </AuthBootstrap>
         </ClientProvider>

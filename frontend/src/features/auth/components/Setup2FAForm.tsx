@@ -1,7 +1,9 @@
 "use client";
 import React, { useState } from "react";
-import { useSetup2FAMutation, useVerify2FAMutation } from "../api/auth.api";
-import { setAccessToken } from "@/src/common/config/axios";
+import {
+  useSetup2FAMutation,
+  useVerify2FAMutation,
+} from "../../../common/api/auth.api";
 
 export default function Setup2FAForm({ userId }: { userId: number }) {
   const [setup2FA] = useSetup2FAMutation();
@@ -22,9 +24,7 @@ export default function Setup2FAForm({ userId }: { userId: number }) {
   const handleVerify = async () => {
     try {
       const res = await verify2FA({ userId, token }).unwrap();
-      if (res.accessToken) {
-        setAccessToken(res.accessToken);
-      }
+
       alert("2FA setup success!");
     } catch (err) {
       alert("Invalid OTP");

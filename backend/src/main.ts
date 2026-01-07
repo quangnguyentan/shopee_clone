@@ -3,9 +3,14 @@ import { AppModule } from './app.module';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
+import { SessionActivityInterceptor } from './session/interceptors/session-activity.interceptor';
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.useStaticAssets(join(__dirname, '..', 'public'), { prefix: '/public/' });
+  app.useGlobalInterceptors(app.get(SessionActivityInterceptor));
+  app.useStaticAssets(join(process.cwd(), 'public'), {
+    prefix: '/',
+  });
   app.use(cookieParser());
   app.enableCors({
     origin: 'http://localhost:3000',

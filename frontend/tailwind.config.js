@@ -9,9 +9,11 @@ module.exports = {
         "blue-primary": "#05a",
         "gray-primary": "#dbdbdb",
         "gray-secondary": "rgba(0,0,0,.26)",
+        "gray-notification": "#f5f5f5",
         "yellow-primary": "#ffbf00",
         "foreground-primary": "#fefaec",
         "grow-primary": "#555",
+        "seperator-color": "#ffffff38",
       },
       flex: {
         1: "1 1 0%",
@@ -23,6 +25,12 @@ module.exports = {
         7: "7 1 0%",
         8: "8 1 0%",
         9: "9 1 0%",
+      },
+      spacing: {
+        header: "119px",
+      },
+      height: {
+        "screen-minus-header": "calc(100vh - 119px)",
       },
     },
   },

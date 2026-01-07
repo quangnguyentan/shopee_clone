@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"; // phải client
-import { setAccessToken } from "@/src/common/config/axios";
 import { baseApi } from "@/src/common/config/baseApi";
+import { logout } from "../storage/auth.slice";
+import { clearMe } from "../storage/user.slice";
 
 export const authApi = baseApi
   .enhanceEndpoints({
@@ -28,16 +29,6 @@ export const authApi = baseApi
             data: body,
           };
         },
-        async onQueryStarted(arg, { queryFulfilled }) {
-          try {
-            const { data } = await queryFulfilled;
-            if (data.accessToken) {
-              setAccessToken(data.accessToken);
-            }
-          } catch (error) {
-            console.log(error);
-          }
-        },
       }),
       setup2FA: builder.mutation<any, { userId: number }>({
         query: (body) => ({
@@ -52,21 +43,23 @@ export const authApi = baseApi
           method: "POST",
           data: body,
         }),
-        async onQueryStarted(arg, { queryFulfilled }) {
-          try {
-            const { data } = await queryFulfilled;
-            setAccessToken(data.accessToken); // lưu accessToken sau 2FA
-          } catch (error) {
-            console.log(error);
-          }
-        },
       }),
-      logout: builder.mutation({
+      logout: builder.mutation<any, void>({
         query: () => {
           return {
             url: "auth/logout",
             method: "POST",
           };
+        },
+        async onQueryStarted(_, { dispatch, queryFulfilled }) {
+          try {
+            await queryFulfilled;
+          } catch (err) {
+            console.error("Logout API failed", err);
+          } finally {
+            dispatch(logout());
+            dispatch(clearMe());
+          }
         },
       }),
     }),

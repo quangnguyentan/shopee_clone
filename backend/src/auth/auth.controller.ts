@@ -16,6 +16,7 @@ import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/auth.guard';
 import { Verify2FAActionDto } from './dto/verify-2fa-action.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { Auth } from '@/common/decorators/auth.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -46,38 +47,43 @@ export class AuthController {
     return this.authService.register(dto);
   }
   @Post('login')
-  login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: any) {
-    return this.authService.login(dto.identifier, dto.password, res);
+  login(
+    @Body() dto: LoginDto,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: any,
+  ) {
+    const ip =
+      req.headers['x-forwarded-for']?.split(',')[0] || req.ip || 'unknown';
+    return this.authService.login(
+      dto.identifier,
+      dto.password,
+      req.headers['user-agent'],
+      ip,
+      res,
+    );
   }
   @Post('refresh')
   refresh(@Req() req: any, @Res({ passthrough: true }) res: any) {
     const token = req.cookies['refreshToken'];
     return this.authService.refreshToken(token, res);
   }
+  @Auth()
   @Post('logout')
-  logout(@Res({ passthrough: true }) res: any) {
-    return this.authService.logout(res);
+  logout(@Req() req, @Res({ passthrough: true }) res: any) {
+    return this.authService.logout(req.user.sessionId, res);
   }
-
   @Post('2fa/setup')
   setup2FA(@Body() dto: Setup2FADto) {
     return this.authService.setup2FA(dto.userId);
   }
 
   @Post('2fa/verify')
-  verify2FA(@Body() dto: Verify2FADto, @Res({ passthrough: true }) res: any) {
+  verify2FA(
+    @Body() dto: Verify2FADto,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: any,
+  ) {
     return this.authService.verify2FA(dto.userId, dto.token, res);
-  }
-  @UseGuards(JwtAuthGuard)
-  @Get('get-profile')
-  async getProfile(@Req() req) {
-    try {
-      const user = req.user;
-      console.log(user);
-      return user;
-    } catch (error) {
-      console.log(error);
-    }
   }
 
   @UseGuards(JwtAuthGuard)

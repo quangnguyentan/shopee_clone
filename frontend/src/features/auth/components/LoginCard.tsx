@@ -25,13 +25,29 @@ import {
   LuEyeClosed,
 } from "@/src/components/shared/Icon";
 import { useNavigate } from "@/src/common/constants/navigate.constant";
-import { useLoginMutation } from "../api/auth.api";
+import { useLoginMutation } from "../../../common/api/auth.api";
 import { toast } from "sonner";
+import { AUTH_ERROR } from "@/src/common/constants/errors";
+import { getErrorMessage } from "@/src/common/helper/handleErrorToast";
+import { loginSuccess } from "@/src/common/storage/auth.slice";
+import { useAppDispatch } from "@/src/common/hooks/useAppSelector";
+import { setMe } from "@/src/common/storage/user.slice";
+import { socket } from "@/src/common/config/socket";
+
+const authErrorMap = {
+  [AUTH_ERROR.USER_NOT_FOUND]: i18n.get(
+    "pages.auth.login.fail.wrong-username-doest-not-exists"
+  ),
+  [AUTH_ERROR.INVALID_PASSWORD]: i18n.get(
+    "pages.auth.login.fail.wrong-username-password.title"
+  ),
+};
 
 const LoginCard = () => {
-  const [login, { isLoading, error }] = useLoginMutation();
+  const [login, { isLoading }] = useLoginMutation();
   const [isShowPassword, setIsShowPassword] = useState(false);
-  const { push } = useNavigate();
+  const dispatch = useAppDispatch();
+  const { push, replace } = useNavigate();
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -39,6 +55,7 @@ const LoginCard = () => {
       password: "",
     },
   });
+
   const isFormValid = form.formState.isValid;
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof loginSchema>) {
@@ -50,15 +67,19 @@ const LoginCard = () => {
         }).unwrap(),
         {
           loading: i18n.get("pages.auth.login.loading.title"),
-          success: () => {
-            push("/");
+          success: (res) => {
+            if (!socket.connected) {
+              socket.connect();
+            }
+            if (res.sessionId) {
+              socket.emit("register_session", res.sessionId);
+            }
+            dispatch(loginSuccess());
+            dispatch(setMe(res.user));
+            replace("/");
             return i18n.get("pages.auth.login.success.title");
           },
-          error: () => {
-            return i18n.get(
-              "pages.auth.login.fail.wrong-username-password.title"
-            );
-          },
+          error: (err) => getErrorMessage(err, authErrorMap),
         }
       );
     } catch (err) {
