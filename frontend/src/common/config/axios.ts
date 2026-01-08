@@ -5,7 +5,7 @@ import { store } from "../storage";
 import { logout } from "@/src/common/storage/auth.slice";
 import { AUTH_EXCLUDE_PATHS } from "../constants";
 import { getEnv } from "./env.client";
-import { clearMe } from "../storage/user.slice";
+import { clearMe, setMe } from "../storage/user.slice";
 import { socket } from "./socket";
 
 /**
@@ -83,15 +83,17 @@ api.interceptors.response.use(
         isRefreshing = true;
 
         try {
-          await api.post("/auth/refresh");
-
+          const { data: refreshData } = await api.post("/auth/refresh");
+          store.dispatch(
+            setMe({ user: refreshData.user, sessionId: refreshData.sessionId })
+          );
           processQueue();
           return api(originalRequest);
         } catch (err) {
           processQueue(err);
           store.dispatch(clearMe());
           store.dispatch(logout());
-          socket.disconnect();
+          if (socket.connected) socket.disconnect();
           return Promise.reject(err);
         } finally {
           isRefreshing = false;
