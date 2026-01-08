@@ -77,6 +77,7 @@ export class AuthController {
   setup2FA(@Body() dto: Setup2FADto) {
     return this.authService.setup2FA(dto.userId);
   }
+
   @Post('2fa/verify')
   verify2FA(
     @Body() dto: Verify2FADto,

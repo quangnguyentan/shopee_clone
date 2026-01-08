@@ -68,14 +68,18 @@ const LoginCard = () => {
         {
           loading: i18n.get("pages.auth.login.loading.title"),
           success: (res) => {
+            dispatch(loginSuccess());
+            dispatch(setMe({ user: res.user, sessionId: res.sessionId }));
             if (!socket.connected) {
               socket.connect();
+              socket.once("connect", () => {
+                if (res.sessionId)
+                  socket.emit("register_session", res.sessionId);
+              });
+            } else {
+              if (res.sessionId) socket.emit("register_session", res.sessionId);
             }
-            if (res.sessionId) {
-              socket.emit("register_session", res.sessionId);
-            }
-            dispatch(loginSuccess());
-            dispatch(setMe(res.user));
+
             replace("/");
             return i18n.get("pages.auth.login.success.title");
           },

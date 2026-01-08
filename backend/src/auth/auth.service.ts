@@ -138,10 +138,17 @@ export class AuthService {
     const session = await this.sessionsService.findById(payload.sessionId);
     if (!session || session.revoked) {
       await this.refreshRepo.delete({ sessionId: payload.sessionId });
+      res.clearCookie('accessToken', {
+        secure: true,
+        sameSite: 'none',
+        path: '/',
+      });
 
-      res.clearCookie('accessToken');
-      res.clearCookie('refreshToken');
-
+      res.clearCookie('refreshToken', {
+        secure: true,
+        sameSite: 'none',
+        path: '/auth/refresh',
+      });
       throw new AppException(AUTH_ERROR.SESSION_REVOKED);
     }
 
@@ -155,15 +162,33 @@ export class AuthService {
 
   async logout(sessionId: string, res: Response) {
     await this.sessionsService.revokeSession(sessionId, { silent: true });
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    res.clearCookie('accessToken', {
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
+
+    res.clearCookie('refreshToken', {
+      secure: true,
+      sameSite: 'none',
+      path: '/auth/refresh',
+    });
     return { success: true };
   }
 
   async logoutAll(userId: number, res: Response) {
     await this.sessionsService.revokeAll(userId);
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    res.clearCookie('accessToken', {
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
+
+    res.clearCookie('refreshToken', {
+      secure: true,
+      sameSite: 'none',
+      path: '/auth/refresh',
+    });
     return { success: true };
   }
 
@@ -201,12 +226,14 @@ export class AuthService {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
       maxAge: 15 * 60 * 1000,
     });
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/auth/refresh',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

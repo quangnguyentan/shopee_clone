@@ -1,21 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   useAppDispatch,
   useAppSelector,
 } from "@/src/common/hooks/useAppSelector";
-import {
-  loginSuccess,
-  finishBootstrap,
-  logout,
-} from "@/src/common/storage/auth.slice";
+import { finishBootstrap, logout } from "@/src/common/storage/auth.slice";
+import { clearMe } from "@/src/common/storage/user.slice";
 import { socket } from "@/src/common/config/socket";
 import { toast } from "sonner";
 import { useSingleTabGuard } from "@/src/common/hooks/useSingleTabGuard";
-import { clearMe, setMe } from "@/src/common/storage/user.slice";
-import { createApi } from "@/src/common/api";
 
 export default function AuthBootstrap({
   children,
@@ -23,53 +18,60 @@ export default function AuthBootstrap({
   children: React.ReactNode;
 }) {
   const dispatch = useAppDispatch();
+  const { me, sessionId } = useAppSelector((s) => s.user);
   const loggedOut = useAppSelector((s) => s.auth.loggedOut);
   const blocked = useSingleTabGuard();
+  const ranBootstrap = useRef(false);
+
   useEffect(() => {
-    if (loggedOut) {
+    if (ranBootstrap.current || loggedOut || me) {
       dispatch(finishBootstrap());
       return;
     }
-    const bootstrap = async () => {
-      const api = createApi();
-      try {
-        const res = await api.post("/auth/refresh");
-        if (!res.data?.sessionId) {
-          throw new Error("SESSION_REVOKED");
-        }
-        dispatch(loginSuccess());
-        dispatch(setMe(res.data.user));
-        if (!socket.connected) socket.connect();
-        if (res.data.sessionId)
-          socket.emit("register_session", res.data.sessionId);
-      } catch {
-        dispatch(clearMe());
-        dispatch(logout());
-        socket.disconnect();
-      } finally {
-        dispatch(finishBootstrap());
-      }
-    };
 
-    bootstrap();
-  }, [dispatch, loggedOut]);
+    ranBootstrap.current = true;
+
+    dispatch(finishBootstrap());
+  }, [dispatch, me, loggedOut]);
 
   useEffect(() => {
-    const onForceLogout = async (data: any) => {
-      toast.error(data?.reason ?? "Session expired");
+    if (!sessionId) return;
 
-      if (socket.connected) {
-        socket.disconnect();
+    const registerSession = () => {
+      if (!socket.connected) {
+        socket.connect();
+        socket.once("connect", () =>
+          socket.emit("register_session", sessionId)
+        );
+      } else {
+        socket.emit("register_session", sessionId);
       }
-      dispatch(clearMe());
-      dispatch(logout());
     };
-    socket.on("force_logout", onForceLogout);
+
+    registerSession();
 
     return () => {
-      socket.off("force_logout", onForceLogout);
+      socket.off("connect", registerSession);
     };
-  }, [dispatch]);
+  }, [sessionId]);
+
+  useEffect(() => {
+    const handleForceLogout = async (data: any) => {
+      if (data?.sessionId === sessionId) return;
+
+      toast.error(data?.reason ?? "Session expired");
+
+      dispatch(clearMe());
+      dispatch(logout());
+
+      if (socket.connected) socket.disconnect();
+    };
+
+    socket.on("force_logout", handleForceLogout);
+    return () => {
+      socket.off("force_logout", handleForceLogout);
+    };
+  }, [dispatch, sessionId]);
 
   if (blocked) {
     return (
@@ -81,7 +83,7 @@ export default function AuthBootstrap({
           <p className="text-[16] my-4">
             Nhấn kích hoạt để sử dụng tại tab này
           </p>
-          <div className="w-full flex items-center justify-end ">
+          <div className="w-full flex items-center justify-end">
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-blue-600 text-white rounded"
