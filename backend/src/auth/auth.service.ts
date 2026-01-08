@@ -122,21 +122,29 @@ export class AuthService {
     } catch {
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
-
     const token = await this.refreshRepo.findOne({
-      where: { jti: payload.jti, revoked: false },
+      where: {
+        jti: payload.jti,
+        sessionId: payload.sessionId,
+      },
     });
     if (!token) throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
 
     const isMatch = await bcrypt.compare(oldToken, token.token_hash);
-    if (!isMatch) throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
-
-    const session = await this.sessionsService.findById(token.sessionId);
-
-    if (!session || session.revoked) {
-      await this.refreshRepo.delete({ id: token.id });
+    if (!isMatch) {
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
+
+    const session = await this.sessionsService.findById(payload.sessionId);
+    if (!session || session.revoked) {
+      await this.refreshRepo.delete({ sessionId: payload.sessionId });
+
+      res.clearCookie('accessToken');
+      res.clearCookie('refreshToken');
+
+      throw new AppException(AUTH_ERROR.SESSION_REVOKED);
+    }
+
     const user = await this.userRepo.findOneBy({ id: session.userId });
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
@@ -146,17 +154,14 @@ export class AuthService {
   }
 
   async logout(sessionId: string, res: Response) {
-    await this.sessionsService.revokeSession(sessionId, true);
-    await this.refreshRepo.delete({ sessionId });
-
+    await this.sessionsService.revokeSession(sessionId, { silent: true });
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
     return { success: true };
   }
 
   async logoutAll(userId: number, res: Response) {
-    await this.sessionsService.revokeAll(userId, true);
-    await this.refreshRepo.delete({ session: { userId } });
+    await this.sessionsService.revokeAll(userId);
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
     return { success: true };
@@ -179,7 +184,7 @@ export class AuthService {
 
   private async issueTokens(user: User, sessionId: string, res: Response) {
     const accessToken = generateAccessToken(user, sessionId);
-    const { token: refreshToken, jti } = generateRefreshToken(user);
+    const { token: refreshToken, jti } = generateRefreshToken(user, sessionId);
     const tokenHash = await bcrypt.hash(refreshToken, 10);
     await this.refreshRepo.manager.transaction(async (manager) => {
       await manager.delete(RefreshToken, { sessionId });

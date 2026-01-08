@@ -57,8 +57,9 @@ export const authApi = baseApi
           } catch (err) {
             console.error("Logout API failed", err);
           } finally {
-            dispatch(logout());
             dispatch(clearMe());
+            dispatch(logout());
+            dispatch(authApi.util.resetApiState());
           }
         },
       }),

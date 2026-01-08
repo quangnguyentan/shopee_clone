@@ -16,13 +16,17 @@ export const generateAccessToken = (user: User, sessionId: string) =>
       expiresIn: '15m',
     },
   );
-export const generateRefreshToken = (user: User) => {
+export const generateRefreshToken = (user: User, sessionId: string) => {
   const jti = randomUUID();
   return {
-    token: jwt.sign({ sub: user.id }, process.env.JWT_REFRESH_SECRET!, {
-      // expiresIn: Number(process.env.JWT_REFRESH_EXPIRES_IN) ?? '7d',
-      expiresIn: '7d',
-    }),
+    token: jwt.sign(
+      { sub: user.id, sessionId, jti },
+      process.env.JWT_REFRESH_SECRET!,
+      {
+        // expiresIn: Number(process.env.JWT_REFRESH_EXPIRES_IN) ?? '7d',
+        expiresIn: '7d',
+      },
+    ),
     jti,
   };
 };
