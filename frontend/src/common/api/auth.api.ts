@@ -45,23 +45,33 @@ export const authApi = baseApi
         }),
       }),
       logout: builder.mutation<any, void>({
-        query: () => {
-          return {
-            url: "auth/logout",
-            method: "POST",
-          };
-        },
+        query: () => ({ url: "auth/logout", method: "POST" }),
         async onQueryStarted(_, { dispatch, queryFulfilled }) {
           try {
             await queryFulfilled;
-          } catch (err) {
-            console.error("Logout API failed", err);
-          } finally {
-            dispatch(clearMe());
-            dispatch(logout());
-            dispatch(authApi.util.resetApiState());
+          } catch (err: any) {
+            const status = err?.error?.status || err?.response?.status;
+            const code = err?.error?.data?.code || err?.response?.data?.code;
+
+            if (
+              status === 401 &&
+              (code === "AUTH.INVALID_REFRESH_TOKEN" ||
+                code === "AUTH.SESSION_REVOKED")
+            ) {
+              console.warn("Session invalid, force logout locally");
+            } else {
+              console.warn("Logout failed, user may retry", err);
+              return;
+            }
           }
+
+          dispatch(clearMe());
+          dispatch(logout());
+          dispatch(authApi.util.resetApiState());
         },
+      }),
+      refresh: builder.mutation<any, void>({
+        query: () => ({ url: "auth/refresh", method: "POST" }),
       }),
     }),
   });
@@ -71,4 +81,5 @@ export const {
   useSetup2FAMutation,
   useVerify2FAMutation,
   useLogoutMutation,
+  useRefreshMutation,
 } = authApi;

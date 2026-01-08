@@ -13,7 +13,7 @@ export const generateAccessToken = (user: User, sessionId: string) =>
     process.env.JWT_ACCESS_SECRET!,
     {
       // expiresIn: Number(process.env.JWT_ACCESS_EXPIRES_IN) ?? '15m',
-      expiresIn: '15m',
+      expiresIn: '15',
     },
   );
 export const generateRefreshToken = (user: User, sessionId: string) => {

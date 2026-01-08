@@ -7,10 +7,11 @@ import {
   useAppSelector,
 } from "@/src/common/hooks/useAppSelector";
 import { finishBootstrap, logout } from "@/src/common/storage/auth.slice";
-import { clearMe } from "@/src/common/storage/user.slice";
+import { clearMe, setMe } from "@/src/common/storage/user.slice";
 import { socket } from "@/src/common/config/socket";
 import { toast } from "sonner";
 import { useSingleTabGuard } from "@/src/common/hooks/useSingleTabGuard";
+import { useRefreshMutation } from "@/src/common/api/auth.api";
 
 export default function AuthBootstrap({
   children,
@@ -18,21 +19,35 @@ export default function AuthBootstrap({
   children: React.ReactNode;
 }) {
   const dispatch = useAppDispatch();
-  const { me, sessionId } = useAppSelector((s) => s.user);
+  const { sessionId } = useAppSelector((s) => s.user);
   const loggedOut = useAppSelector((s) => s.auth.loggedOut);
   const blocked = useSingleTabGuard();
   const ranBootstrap = useRef(false);
 
+  const [refresh] = useRefreshMutation();
+
   useEffect(() => {
-    if (ranBootstrap.current || loggedOut || me) {
+    if (ranBootstrap.current || loggedOut) {
       dispatch(finishBootstrap());
       return;
     }
 
     ranBootstrap.current = true;
 
-    dispatch(finishBootstrap());
-  }, [dispatch, me, loggedOut]);
+    const trySilentRefresh = async () => {
+      try {
+        const res = await refresh().unwrap();
+        dispatch(setMe({ user: res.user, sessionId: res.sessionId }));
+      } catch {
+        dispatch(clearMe());
+        dispatch(logout());
+      } finally {
+        dispatch(finishBootstrap());
+      }
+    };
+
+    trySilentRefresh();
+  }, [dispatch, loggedOut, sessionId, refresh]);
 
   useEffect(() => {
     if (!sessionId) return;

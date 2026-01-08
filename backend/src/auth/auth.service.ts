@@ -137,6 +137,7 @@ export class AuthService {
 
     const session = await this.sessionsService.findById(payload.sessionId);
     if (!session || session.revoked) {
+      console.log(!session || session.revoked);
       await this.refreshRepo.delete({ sessionId: payload.sessionId });
       res.clearCookie('accessToken', {
         secure: true,
@@ -147,7 +148,7 @@ export class AuthService {
       res.clearCookie('refreshToken', {
         secure: true,
         sameSite: 'none',
-        path: '/auth/refresh',
+        path: '/',
       });
       throw new AppException(AUTH_ERROR.SESSION_REVOKED);
     }
@@ -171,7 +172,7 @@ export class AuthService {
     res.clearCookie('refreshToken', {
       secure: true,
       sameSite: 'none',
-      path: '/auth/refresh',
+      path: '/',
     });
     return { success: true };
   }
@@ -187,7 +188,7 @@ export class AuthService {
     res.clearCookie('refreshToken', {
       secure: true,
       sameSite: 'none',
-      path: '/auth/refresh',
+      path: '/',
     });
     return { success: true };
   }
@@ -233,7 +234,7 @@ export class AuthService {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      path: '/auth/refresh',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
