@@ -29,19 +29,13 @@ export class SessionsService {
     });
     if (oldSessions.length) {
       const ids = oldSessions.map((s) => s.id);
-
       await this.sessionRepo.manager.transaction(async (manager) => {
         await manager.update(Session, { id: In(ids) }, { revoked: true });
         await manager.delete(RefreshToken, { sessionId: In(ids) });
       });
-
       this.eventEmitter.emit('session.revoked', oldSessions);
     }
-
-    const session = await this.sessionRepo.create({
-      ...data,
-      revoked: false,
-    });
+    const session = await this.sessionRepo.create({ ...data, revoked: false });
     return await this.sessionRepo.save(session);
   }
 

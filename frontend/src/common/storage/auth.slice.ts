@@ -19,11 +19,9 @@ const authSlice = createSlice({
     loginSuccess(state) {
       state.isAuthenticated = true;
       state.loggedOut = false;
-      state.bootstrapped = true;
     },
     logout(state) {
       state.isAuthenticated = false;
-      state.bootstrapped = true;
       state.loggedOut = true;
     },
     finishBootstrap(state) {

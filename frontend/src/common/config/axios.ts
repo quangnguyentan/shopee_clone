@@ -50,54 +50,58 @@ const processQueue = (error: any = null) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    if (!originalRequest) return Promise.reject(error);
-    const status = error.response?.status;
-    const data = error.response?.data;
-    const isAuthExcluded = AUTH_EXCLUDE_PATHS.some((path) =>
-      originalRequest?.url?.includes(path)
-    );
-    if (
-      status === 401 &&
-      (data?.code === "AUTH.SESSION_REVOKED" ||
-        data?.code === "AUTH.INVALID_REFRESH_TOKEN")
-    ) {
-      store.dispatch(clearMe());
-      store.dispatch(logout());
-      socket.disconnect();
-      return Promise.reject(error);
-    }
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !isAuthExcluded
-    ) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then(() => api(originalRequest));
-      }
+    try {
+      const originalRequest = error.config;
+      if (!originalRequest) return Promise.reject(error);
+      const state = store.getState();
+      if (state.auth.loggedOut) return Promise.reject(error);
+      const status = error.response?.status;
+      const data = error.response?.data;
+      const isAuthExcluded = AUTH_EXCLUDE_PATHS.some((path) =>
+        originalRequest?.url?.includes(path)
+      );
 
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        await api.post("/auth/refresh");
-
-        processQueue();
-        return api(originalRequest);
-      } catch (err) {
-        processQueue(err);
+      if (
+        status === 401 &&
+        (data?.code === "AUTH.SESSION_REVOKED" ||
+          data?.code === "AUTH.INVALID_REFRESH_TOKEN")
+      ) {
         store.dispatch(clearMe());
         store.dispatch(logout());
-        socket.disconnect();
-        return Promise.reject(err);
-      } finally {
-        isRefreshing = false;
+        if (socket.connected) socket.disconnect();
+        return Promise.reject(error);
       }
-    }
 
-    return Promise.reject(error);
+      if (status === 401 && !originalRequest._retry && !isAuthExcluded) {
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          }).then(() => api(originalRequest));
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          await api.post("/auth/refresh");
+
+          processQueue();
+          return api(originalRequest);
+        } catch (err) {
+          processQueue(err);
+          store.dispatch(clearMe());
+          store.dispatch(logout());
+          socket.disconnect();
+          return Promise.reject(err);
+        } finally {
+          isRefreshing = false;
+        }
+      }
+
+      return Promise.reject(error);
+    } catch (error) {
+      return Promise.reject(error);
+    }
   }
 );
 
