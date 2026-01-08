@@ -35,15 +35,10 @@ export class SessionGateway {
   }
 
   @OnEvent('session.revoked')
-  handleSessionRevoked(payload: {
-    sessions: Session[];
-    revokedBySelf: boolean;
-  }) {
-    const { revokedBySelf, sessions } = payload;
-    if (revokedBySelf)
-      sessions.forEach((s) => {
-        this.forceLogoutBySession(s.id);
-      });
+  handleSessionRevoked(sessions: Session[]) {
+    sessions.forEach((s) => {
+      this.forceLogoutBySession(s.id);
+    });
   }
 
   private getSessionRoom(sessionId: string) {

@@ -2,8 +2,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAppDispatch } from "@/src/common/hooks/useAppSelector";
-import { loginSuccess, finishBootstrap } from "@/src/common/storage/auth.slice";
+import {
+  useAppDispatch,
+  useAppSelector,
+} from "@/src/common/hooks/useAppSelector";
+import {
+  loginSuccess,
+  finishBootstrap,
+  logout,
+} from "@/src/common/storage/auth.slice";
 import { socket } from "@/src/common/config/socket";
 import { toast } from "sonner";
 import { useSingleTabGuard } from "@/src/common/hooks/useSingleTabGuard";
@@ -16,21 +23,28 @@ export default function AuthBootstrap({
   children: React.ReactNode;
 }) {
   const dispatch = useAppDispatch();
+  const loggedOut = useAppSelector((s) => s.auth.loggedOut);
   const blocked = useSingleTabGuard();
-
   useEffect(() => {
+    if (loggedOut) {
+      dispatch(finishBootstrap());
+      return;
+    }
     const bootstrap = async () => {
       const api = createApi();
       try {
         const res = await api.post("/auth/refresh");
+        if (!res.data?.sessionId) {
+          throw new Error("SESSION_REVOKED");
+        }
         dispatch(loginSuccess());
         dispatch(setMe(res.data.user));
         if (!socket.connected) socket.connect();
-        if (res.data.sessionId) {
+        if (res.data.sessionId)
           socket.emit("register_session", res.data.sessionId);
-        }
       } catch {
         dispatch(clearMe());
+        dispatch(logout());
         socket.disconnect();
       } finally {
         dispatch(finishBootstrap());
@@ -38,15 +52,17 @@ export default function AuthBootstrap({
     };
 
     bootstrap();
-  }, [dispatch]);
+  }, [dispatch, loggedOut]);
 
   useEffect(() => {
     const onForceLogout = async (data: any) => {
       toast.error(data?.reason ?? "Session expired");
+
       if (socket.connected) {
         socket.disconnect();
       }
       dispatch(clearMe());
+      dispatch(logout());
     };
     socket.on("force_logout", onForceLogout);
 

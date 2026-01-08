@@ -5,92 +5,101 @@ import { store } from "../storage";
 import { logout } from "@/src/common/storage/auth.slice";
 import { AUTH_EXCLUDE_PATHS } from "../constants";
 import { getEnv } from "./env.client";
+import { clearMe } from "../storage/user.slice";
+import { socket } from "./socket";
 
-export function createApi() {
-  /**
-   * Axios instance
-   * - withCredentials: gửi HttpOnly cookie (accessToken, refreshToken)
-   */
-  const env = getEnv();
-  const api = axios.create({
-    baseURL: env.NEXT_PUBLIC_API_URL,
-    withCredentials: true,
+/**
+ * Axios instance
+ * - withCredentials: gửi HttpOnly cookie (accessToken, refreshToken)
+ */
+const env = getEnv();
+export const api = axios.create({
+  baseURL: env.NEXT_PUBLIC_API_URL,
+  withCredentials: true,
+});
+
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    _retry?: boolean;
+  }
+}
+
+/**
+ * Refresh queue
+ */
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+}> = [];
+
+const processQueue = (error: any = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) prom.reject(error);
+    else prom.resolve(true);
   });
+  failedQueue = [];
+};
 
-  /**
-   * Refresh queue
-   */
-  let isRefreshing = false;
-  let failedQueue: Array<{
-    resolve: (value?: any) => void;
-    reject: (reason?: any) => void;
-  }> = [];
-
-  const processQueue = (error: any = null) => {
-    failedQueue.forEach((prom) => {
-      if (error) prom.reject(error);
-      else prom.resolve(true);
-    });
-    failedQueue = [];
-  };
-
-  /**
-   * Response interceptor
-   * - 401 → gọi /auth/refresh
-   * - refresh OK → retry request cũ
-   * - refresh FAIL → logout
-   */
-  api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-      if (!originalRequest) return Promise.reject(error);
-      const isAuthExcluded = AUTH_EXCLUDE_PATHS.some((path) =>
-        originalRequest?.url?.includes(path)
-      );
-      const status = error.response?.status;
-      const data = error.response?.data;
-      if (
-        (status === 401 && data?.code === "AUTH.INVALID_REFRESH_TOKEN") ||
-        (status === 401 && originalRequest.url?.includes("/auth/refresh"))
-      ) {
-        store.dispatch(logout());
-        return Promise.reject(error);
-      }
-
-      if (
-        error.response?.status === 401 &&
-        !originalRequest._retry &&
-        !isAuthExcluded
-      ) {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
-          }).then(() => api(originalRequest));
-        }
-
-        originalRequest._retry = true;
-        isRefreshing = true;
-
-        try {
-          await api.post("/auth/refresh");
-
-          processQueue();
-          return api(originalRequest);
-        } catch (err) {
-          processQueue(err);
-          store.dispatch(logout());
-          return Promise.reject(err);
-        } finally {
-          isRefreshing = false;
-        }
-      }
-
+/**
+ * Response interceptor
+ * - 401 → gọi /auth/refresh
+ * - refresh OK → retry request cũ
+ * - refresh FAIL → logout
+ */
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
+    const status = error.response?.status;
+    const data = error.response?.data;
+    const isAuthExcluded = AUTH_EXCLUDE_PATHS.some((path) =>
+      originalRequest?.url?.includes(path)
+    );
+    if (
+      status === 401 &&
+      (data?.code === "AUTH.SESSION_REVOKED" ||
+        data?.code === "AUTH.INVALID_REFRESH_TOKEN")
+    ) {
+      store.dispatch(clearMe());
+      store.dispatch(logout());
+      socket.disconnect();
       return Promise.reject(error);
     }
-  );
-  return api;
-}
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthExcluded
+    ) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => api(originalRequest));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        await api.post("/auth/refresh");
+
+        processQueue();
+        return api(originalRequest);
+      } catch (err) {
+        processQueue(err);
+        store.dispatch(clearMe());
+        store.dispatch(logout());
+        socket.disconnect();
+        return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 /**
  * RTK Query baseQuery dùng Axios
@@ -105,7 +114,6 @@ type AxiosBaseQueryArgs = {
 export const axiosBaseQuery =
   (): BaseQueryFn<AxiosBaseQueryArgs, unknown, unknown> =>
   async ({ url, method, data, params }) => {
-    const api = createApi();
     try {
       const result = await api.request({ url, method, data, params });
       return { data: result.data };
