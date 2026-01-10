@@ -67,12 +67,17 @@ export class AuthController {
     const token = req.cookies['refreshToken'];
     return this.authService.refreshToken(token, res);
   }
-  @Auth()
   @Post('logout')
   logout(@Req() req, @Res({ passthrough: true }) res: any) {
-    const sessionId = req.user?.sessionId;
-    return this.authService.logout(sessionId, res);
+    const refreshToken = req.cookies?.refreshToken;
+    return this.authService.logoutByRefresh(refreshToken, res);
   }
+  @Post('logout-all')
+  logoutAll(@Req() req, @Res({ passthrough: true }) res: any) {
+    const refreshToken = req.cookies?.refreshToken;
+    return this.authService.logoutAllByRefresh(refreshToken, res);
+  }
+
   @Post('2fa/setup')
   setup2FA(@Body() dto: Setup2FADto) {
     return this.authService.setup2FA(dto.userId);

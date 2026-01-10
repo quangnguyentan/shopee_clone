@@ -1,10 +1,2 @@
-import axios from "axios";
-import { getEnv } from "../config/env.client";
-
-export function createApi() {
-  const env = getEnv();
-  return axios.create({
-    baseURL: env.NEXT_PUBLIC_API_URL,
-    withCredentials: true,
-  });
-}
+export { authApi } from "./auth.api";
+export { userApi } from "./user.api";

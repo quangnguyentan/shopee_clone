@@ -137,7 +137,6 @@ export class AuthService {
 
     const session = await this.sessionsService.findById(payload.sessionId);
     if (!session || session.revoked) {
-      console.log(!session || session.revoked);
       await this.refreshRepo.delete({ sessionId: payload.sessionId });
       res.clearCookie('accessToken', {
         secure: true,
@@ -161,35 +160,72 @@ export class AuthService {
     return this.issueTokens(user, session.id, res);
   }
 
-  async logout(sessionId: string, res: Response) {
-    await this.sessionsService.revokeSession(sessionId, { silent: true });
+  private clearAuthCookies(res: Response) {
     res.clearCookie('accessToken', {
-      secure: true,
-      sameSite: 'none',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
     });
 
     res.clearCookie('refreshToken', {
-      secure: true,
-      sameSite: 'none',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
     });
+  }
+
+  async logoutByRefresh(refreshToken: string, res: Response) {
+    if (!refreshToken) {
+      this.clearAuthCookies(res);
+      return { success: true };
+    }
+
+    let payload: any;
+    try {
+      payload = verifyToken(refreshToken);
+    } catch {
+      this.clearAuthCookies(res);
+      return { success: true };
+    }
+
+    await this.sessionsService.revokeSession(payload.sessionId, {
+      silent: true,
+    });
+    await this.refreshRepo.delete({ sessionId: payload.sessionId });
+
+    this.clearAuthCookies(res);
     return { success: true };
   }
 
-  async logoutAll(userId: number, res: Response) {
-    await this.sessionsService.revokeAll(userId);
-    res.clearCookie('accessToken', {
-      secure: true,
-      sameSite: 'none',
-      path: '/',
+  async logoutAllByRefresh(refreshToken: string, res: Response) {
+    if (!refreshToken) {
+      this.clearAuthCookies(res);
+      return { success: true };
+    }
+
+    let payload: any;
+    try {
+      payload = verifyToken(refreshToken);
+    } catch {
+      this.clearAuthCookies(res);
+      return { success: true };
+    }
+
+    const session = await this.sessionsService.findById(payload.sessionId);
+    if (!session) {
+      this.clearAuthCookies(res);
+      return { success: true };
+    }
+
+    await this.sessionsService.revokeAll(session.userId);
+
+    await this.refreshRepo.delete({
+      session: { userId: session.userId },
     });
 
-    res.clearCookie('refreshToken', {
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-    });
+    this.clearAuthCookies(res);
     return { success: true };
   }
 

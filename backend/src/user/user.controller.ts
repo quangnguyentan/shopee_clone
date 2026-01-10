@@ -12,15 +12,13 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { JwtAuthGuard } from '@/auth/guards/auth.guard';
-import { AppException } from '@/common/exceptions/app.exception';
-import { USER_ERROR } from '@/common/errors/user.error';
+import { Auth } from '@/common/decorators/auth.decorator';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @Auth()
   @Get('me')
   async getMe(@Req() req) {
     return this.userService.getMe(req.user.userId);
