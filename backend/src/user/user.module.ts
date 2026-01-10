@@ -3,10 +3,10 @@ import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { SessionActivityInterceptor } from '@/session/interceptors/session-activity.interceptor';
+import { Session } from '@/session/entities/session.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
+  imports: [TypeOrmModule.forFeature([User, Session])],
   controllers: [UserController],
   providers: [UserService],
 })

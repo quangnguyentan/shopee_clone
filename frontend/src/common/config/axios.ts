@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import { BaseQueryFn } from "@reduxjs/toolkit/query";
-import { store } from "../storage";
 import { logout } from "@/src/common/storage/auth.slice";
 import { AUTH_EXCLUDE_PATHS } from "../constants";
 import { getEnv } from "./env.client";
@@ -27,6 +26,12 @@ declare module "axios" {
 /**
  * Refresh queue
  */
+let appStore: any;
+
+export const injectStore = (_store: any) => {
+  appStore = _store;
+};
+
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value?: any) => void;
@@ -53,7 +58,7 @@ api.interceptors.response.use(
     try {
       const originalRequest = error.config;
       if (!originalRequest) return Promise.reject(error);
-      const state = store.getState();
+      const state = appStore.getState();
       if (state.auth.loggedOut) return Promise.reject(error);
       const status = error.response?.status;
       const data = error.response?.data;
@@ -66,8 +71,8 @@ api.interceptors.response.use(
         (data?.code === "AUTH.SESSION_REVOKED" ||
           data?.code === "AUTH.INVALID_REFRESH_TOKEN")
       ) {
-        store.dispatch(clearMe());
-        store.dispatch(logout());
+        appStore.dispatch(clearMe());
+        appStore.dispatch(logout());
         if (socket.connected) socket.disconnect();
         return Promise.reject(error);
       }
@@ -84,15 +89,15 @@ api.interceptors.response.use(
 
         try {
           const { data: refreshData } = await api.post("/auth/refresh");
-          store.dispatch(
+          appStore.dispatch(
             setMe({ user: refreshData.user, sessionId: refreshData.sessionId })
           );
           processQueue();
           return api(originalRequest);
         } catch (err) {
           processQueue(err);
-          store.dispatch(clearMe());
-          store.dispatch(logout());
+          appStore.dispatch(clearMe());
+          appStore.dispatch(logout());
           if (socket.connected) socket.disconnect();
           return Promise.reject(err);
         } finally {

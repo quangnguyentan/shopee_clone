@@ -3,7 +3,8 @@ import i18n from "@/src/lib/locale";
 import { useMemo } from "react";
 import { CiSearch, LuShoppingCart, useShopeeLogo } from "./Icon";
 import TopBar from "./TopBar";
-import { IconInput } from "./IconInput";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 export const HEADER_HEIGHT = 119;
 const Header = () => {
   const { isAuthRoute, location, logo } = useShopeeLogo();
@@ -33,17 +34,22 @@ const Header = () => {
     );
   }
   return (
-    <div className="bg-red-primary fixed w-full">
-      <header className="h-[119px] px-6 lg:px-24 max-w-screen-xl mx-auto flex flex-col ">
+    <div className="bg-red-gradient fixed w-full z-50">
+      <header className="h-[119px] px-12 max-w-screen-xl mx-auto flex flex-col ">
         <TopBar />
-        <div className="flex items-center justify-between w-full h-full py-2 gap-2">
-          <div className="flex-2">{logo}</div>
-          <div className="flex-7 flex flex-col gap-1">
-            <IconInput
-              endIcon={<CiSearch />}
-              placeholder={i18n.get("pages.home.header.search.placeholder")}
-              className="bg-white rounded-sm py-5 px-3"
-            />
+        <div className="flex items-center justify-between w-full h-full gap-8">
+          <div className="flex-[1.5]">{logo}</div>
+          <div className="flex-7 flex flex-col gap-1 translate-y-1">
+            <div className="relative w-full">
+              <Input
+                placeholder={i18n.get("pages.home.header.search.placeholder")}
+                className="bg-white rounded-sm py-5 px-3 w-full pr-20"
+              />
+              <Button className="absolute right-1 top-1/2 -translate-y-1/2 bg-red-primary w-16 h-9 rounded-sm ">
+                <CiSearch color="white" size={18} className="stroke-1" />
+              </Button>
+            </div>
+
             <div className="flex items-center gap-3 text-white text-xs">
               <span>Sục Crocs</span>
               <span>Áo khoác name đẹp</span>

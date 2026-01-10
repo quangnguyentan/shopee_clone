@@ -85,7 +85,7 @@ const TopBar = () => {
               ))}
             </div>
           }
-          classNameContent="bg-white"
+          classNameContent="bg-white w-40"
         />
       );
     }
@@ -139,10 +139,10 @@ const TopBar = () => {
                 </span>
               </div>
               <div className="flex items-center flex-1 w-full ">
-                <Button className="bg-gray-notification flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
+                <Button className="bg-gray-blackground flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
                   {i18n.get("pages.auth.login.button-login")}
                 </Button>
-                <Button className="bg-gray-notification flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
+                <Button className="bg-gray-blackground flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
                   {i18n.get("pages.auth.register.button-register")}
                 </Button>
               </div>
@@ -179,7 +179,7 @@ const TopBar = () => {
               ))}
             </div>
           }
-          classNameContent="bg-white"
+          classNameContent="bg-white w-40"
         />
         {renderHoverCard}
       </div>

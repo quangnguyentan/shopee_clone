@@ -5,6 +5,8 @@ export const AUTH_EXCLUDE_PATHS = [
   "/auth/register",
   "/auth/refresh",
   "/auth/2fa",
+  "/auth/logout",
+  "/auth/logout-all",
 ];
 
 export const AUTH_ROUTES = ["/buyer/login", "/buyer/signup"];

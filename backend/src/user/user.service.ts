@@ -14,8 +14,6 @@ export class UserService {
     private readonly userRepo: Repository<User>,
   ) {}
 
-  async;
-
   async getMe(userId: number) {
     const user = await this.userRepo.findOne({
       where: { id: userId },
