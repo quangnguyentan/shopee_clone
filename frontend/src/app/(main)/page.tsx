@@ -28,7 +28,7 @@ const Home = () => {
         <div className="bg-white rounded-md w-full">
           <TopSearch />
         </div>
-        <div className="bg-white rounded-md w-full">
+        <div className="rounded-md w-full">
           <ProductList />
         </div>
       </div>

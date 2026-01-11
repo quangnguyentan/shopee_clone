@@ -18,6 +18,10 @@ module.exports = {
         "red-secondary": "#d0011b",
         "red-tertiary": "#ffbda6",
         "black-shadow": "#00000042",
+        discount: "#FEEEEA",
+        lightning: "#ec3814",
+        "yellow-primary": "#ffe97a",
+        "red-rgb": "rgb(238, 77, 45)",
       },
       backgroundImage: {
         "red-gradient": "linear-gradient(-180deg, #f53d2d, #f63)",

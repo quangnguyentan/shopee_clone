@@ -13,7 +13,10 @@ import {
 } from "@/src/components/shared/CarouselList";
 import { Card, CardContent } from "@/src/components/ui/card";
 import phone from "@/src/assest/phone.jpg";
+import mall from "@/src/assest/mall.png";
+import shop_mall_voucher from "@/src/assest/shop_mall_voucher.png";
 import Image from "next/image";
+import { BsLightningFill } from "@/src/components/shared/Icon";
 const END_TIME = Date.now() + 120 * 60 * 1000;
 
 const FlashSale = () => {
@@ -79,12 +82,30 @@ const FlashSale = () => {
                         className="flex items-center justify-center h-full p-0 w-full flex-col gap-4 hover:shadow-lg cursor-pointer"
                         onClick={() => {}}
                       >
-                        <div className="w-[90%] h-44">
+                        <div className="w-[90%] h-44 relative">
                           <Image
                             src={phone}
                             alt="phone"
                             className="w-full h-full object-cover"
                           />
+                          <div className="absolute top-0 right-0 bg-yellow-primary text-lightning flex items-center gap-1 rounded-bl-md">
+                            <BsLightningFill size={14} />
+                            <span className="text-sm font-semibold">-25%</span>
+                          </div>
+                          <div className="absolute top-4 left-0 w-full h-full">
+                            <Image
+                              src={mall}
+                              alt="mall"
+                              className="object-cover w-6 h-5"
+                            />
+                          </div>
+                          <div className="absolute bottom-0 w-full h-full">
+                            <Image
+                              src={shop_mall_voucher}
+                              alt="shop_mall_voucher"
+                              className="w-full h-full"
+                            />
+                          </div>
                         </div>
                         <div className="space-y-2 w-[70%] flex items-center justify-center flex-col">
                           <strong className="text-red-primary text-xl font-normal flex gap-0.5">
