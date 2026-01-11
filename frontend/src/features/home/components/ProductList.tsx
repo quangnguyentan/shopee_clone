@@ -30,16 +30,20 @@ const ProductList = () => {
     : productsMock.slice(start, end);
 
   useEffect(() => {
-    window.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [pageNumber]);
 
   return (
-    <div className="flex flex-col gap-4 w-full bg-white rounded-md">
-      {/* Sticky title */}
+    <div
+      className={cn(
+        "flex flex-col gap-4 w-full rounded-md",
+        isHome ? "" : "bg-white"
+      )}
+    >
       <div
         className={cn(
           "sticky top-header z-30 bg-white px-4 py-3 flex justify-center",
-          "border-y-2 border-red-primary"
+          "border-b-[3px] border-red-primary"
         )}
       >
         <span className="font-medium text-base text-red-primary">

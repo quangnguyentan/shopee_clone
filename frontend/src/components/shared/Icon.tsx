@@ -11,6 +11,7 @@ export { IoReload } from "react-icons/io5";
 export { SiShopee } from "react-icons/si";
 export { CiSearch } from "react-icons/ci";
 export { GrLanguage } from "react-icons/gr";
+export { BsLightningFill } from "react-icons/bs";
 export {
   IoIosNotificationsOutline,
   IoIosArrowDown,
