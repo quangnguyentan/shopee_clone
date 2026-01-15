@@ -1,3 +1,4 @@
+import { BaseEntity } from '@/base/base.entity';
 import { Product } from 'src/product/entities/product.entity';
 import { VariantOption } from 'src/variant-option/entities/variant-option.entity';
 import {
@@ -10,15 +11,12 @@ import {
 } from 'typeorm';
 
 @Entity('product_variants')
-export class ProductVariant {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: number;
-
+export class ProductVariant extends BaseEntity {
   @ManyToOne(() => Product, (product) => product.variants)
   @JoinColumn({ name: 'product_id' })
   product: Product;
 
-  @Column()
+  @Column({ unique: true })
   sku: string;
 
   @Column('decimal')

@@ -1,12 +1,11 @@
 import { I18nKeys } from "@/src/lib/locale";
-
+const AUTH_SCOPE = "buyer";
 export const AUTH_EXCLUDE_PATHS = [
-  "/auth/login",
   "/auth/register",
-  "/auth/refresh",
-  "/auth/2fa",
-  "/auth/logout",
-  "/auth/logout-all",
+  `/auth/${AUTH_SCOPE}/login`,
+  `/auth/logout`,
+  `/auth/logout-all`,
+  `/auth/2fa/verify`,
 ];
 
 export const AUTH_ROUTES = ["/buyer/login", "/buyer/signup"];

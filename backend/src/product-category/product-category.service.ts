@@ -1,26 +1,51 @@
-import { Injectable } from '@nestjs/common';
-import { CreateProductCategoryDto } from './dto/create-product-category.dto';
-import { UpdateProductCategoryDto } from './dto/update-product-category.dto';
+import { Injectable, ConflictException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { BaseService } from '@/base/base.service';
+import { ProductCategory } from './entities/product-category.entity';
 
 @Injectable()
-export class ProductCategoryService {
-  create(createProductCategoryDto: CreateProductCategoryDto) {
-    return 'This action adds a new productCategory';
+export class ProductCategoryService extends BaseService<ProductCategory> {
+  constructor(
+    @InjectRepository(ProductCategory)
+    repo: Repository<ProductCategory>,
+  ) {
+    super(repo);
   }
 
-  findAll() {
-    return `This action returns all productCategory`;
+  async createRelation(dto: { product_id: number; category_id: number }) {
+    const exists = await this.repo.findOne({
+      where: {
+        product_id: dto.product_id,
+        category_id: dto.category_id,
+      },
+    });
+
+    if (exists) {
+      throw new ConflictException('Product already belongs to this category');
+    }
+
+    return this.create(dto);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} productCategory`;
+  findByProduct(productId: number) {
+    return this.repo.find({
+      where: { product_id: productId },
+      relations: ['category'],
+    });
   }
 
-  update(id: number, updateProductCategoryDto: UpdateProductCategoryDto) {
-    return `This action updates a #${id} productCategory`;
+  findByCategory(categoryId: number) {
+    return this.repo.find({
+      where: { category_id: categoryId },
+      relations: ['product'],
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} productCategory`;
+  async deleteRelation(productId: number, categoryId: number) {
+    return this.repo.delete({
+      product_id: productId,
+      category_id: categoryId,
+    });
   }
 }

@@ -1,16 +1,11 @@
+import { BaseEntity } from '@/base/base.entity';
 import { ProductVariant } from 'src/product-variant/entities/product-variant.entity';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 
 @Entity('variant_options')
-export class VariantOption {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: number;
+export class VariantOption extends BaseEntity {
+  @Column()
+  variant_id: number;
 
   @ManyToOne(() => ProductVariant, (v) => v.options)
   @JoinColumn({ name: 'variant_id' })

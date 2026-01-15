@@ -26,6 +26,11 @@ import { SessionModule } from './session/session.module';
 import { AssetModule } from './assets/assets.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { FlashSaleModule } from './flash-sale/flash-sale.module';
+import { FlashSaleItemModule } from './flash-sale-item/flash-sale-item.module';
+import { ShopFollowModule } from './shop-follow/shop-follow.module';
+import { ReportModule } from './report/report.module';
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -39,6 +44,7 @@ import { join } from 'path';
         : '.env.development.local',
       ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
@@ -49,9 +55,9 @@ import { join } from 'path';
           autoLoadEntities: true,
           synchronize: true,
           extra: {
-            max: 1,
+            max: 10,
+            connectionTimeoutMillis: 5000,
             idleTimeoutMillis: 0,
-            connectionTimeoutMillis: 15000,
           },
           ssl: {
             rejectUnauthorized: false,
@@ -80,6 +86,10 @@ import { join } from 'path';
     ChatMessageModule,
     SessionModule,
     AssetModule,
+    FlashSaleModule,
+    FlashSaleItemModule,
+    ShopFollowModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

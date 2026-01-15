@@ -16,7 +16,9 @@ const Categories = () => {
     <Carousel
       opts={{
         align: "start",
-        containScroll: "trimSnaps",
+        containScroll: false,
+        dragFree: true,
+        skipSnaps: true,
         slidesToScroll: 3,
       }}
       className="w-full"
@@ -36,6 +38,8 @@ const Categories = () => {
                         src={category_1}
                         alt="category"
                         className="w-20 h-20 object-cover"
+                        priority
+                        draggable={false}
                       />
                     </div>
                     <div className="space-y-2 w-[90%] mx-auto flex-col">

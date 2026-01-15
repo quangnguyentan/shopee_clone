@@ -1,3 +1,5 @@
+import { BaseEntity } from '@/base/base.entity';
+import { ProductImage } from '@/product-image/entities/product-image.entity';
 import { ProductVariant } from 'src/product-variant/entities/product-variant.entity';
 import { Shop } from 'src/shop/entities/shop.entity';
 import {
@@ -11,10 +13,7 @@ import {
 } from 'typeorm';
 
 @Entity('products')
-export class Product {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: number;
-
+export class Product extends BaseEntity {
   @ManyToOne(() => Shop, (shop) => shop.products)
   @JoinColumn({ name: 'shop_id' })
   shop: Shop;
@@ -40,6 +39,6 @@ export class Product {
   @OneToMany(() => ProductVariant, (v) => v.product)
   variants: ProductVariant[];
 
-  @CreateDateColumn()
-  created_at: Date;
+  @OneToMany(() => ProductImage, (img) => img.product)
+  images: ProductImage[];
 }

@@ -6,10 +6,4 @@ export class LoginDto {
 
   @IsString()
   password: string;
-
-  @IsString()
-  userAgent: string;
-
-  @IsString()
-  socketId: string;
 }

@@ -1,26 +1,70 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Repository } from 'typeorm';
+import { BaseService } from '@/base/base.service';
+import { Category } from './entities/category.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
-export class CategoryService {
-  create(createCategoryDto: CreateCategoryDto) {
-    return 'This action adds a new category';
+export class CategoryService extends BaseService<Category> {
+  constructor(
+    @InjectRepository(Category)
+    repo: Repository<Category>,
+  ) {
+    super(repo);
   }
 
-  findAll() {
-    return `This action returns all category`;
+  async createCategory(dto: CreateCategoryDto) {
+    let parent;
+
+    if (dto.parent_id) {
+      parent = await this.repo.findOne({
+        where: { id: dto.parent_id },
+      });
+
+      if (!parent) throw new NotFoundException('Parent category not found');
+    }
+
+    return this.create({
+      name: dto.name,
+      imageUrl: dto.imageUrl,
+      orderIndex: dto.orderIndex,
+      parent,
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} category`;
+  async updateCategory(id: number, dto: UpdateCategoryDto) {
+    if (dto.parent_id) {
+      const parent = await this.repo.findOne({
+        where: { id: dto.parent_id },
+      });
+
+      if (!parent) throw new NotFoundException('Parent category not found');
+
+      return this.updateById(id, {
+        name: dto.name,
+        parent,
+        imageUrl: dto.imageUrl,
+        orderIndex: dto.orderIndex,
+      } as any);
+    }
+
+    return this.updateById(id, dto);
   }
 
-  update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    return `This action updates a #${id} category`;
+  findAllTree() {
+    return this.repo.find({
+      where: { parent: IsNull() },
+      relations: ['children'],
+      order: { id: 'ASC' },
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} category`;
+  findChildren(parentId: number) {
+    return this.repo.find({
+      where: { parent: { id: parentId } } as any,
+      relations: ['children'],
+    });
   }
 }

@@ -1,9 +1,10 @@
+import { BaseEntity } from '@/base/base.entity';
 import { Category } from 'src/category/entities/category.entity';
 import { Product } from 'src/product/entities/product.entity';
 import { Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 
 @Entity('product_categories')
-export class ProductCategory {
+export class ProductCategory extends BaseEntity {
   @PrimaryColumn({ type: 'bigint', name: 'product_id' })
   product_id: number;
 

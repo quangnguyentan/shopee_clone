@@ -1,26 +1,44 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { BaseService } from '@/base/base.service';
+import { Product } from './entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 @Injectable()
-export class ProductService {
-  create(createProductDto: CreateProductDto) {
-    return 'This action adds a new product';
+export class ProductService extends BaseService<Product> {
+  constructor(
+    @InjectRepository(Product)
+    repo: Repository<Product>,
+  ) {
+    super(repo);
   }
 
-  findAll() {
-    return `This action returns all product`;
+  async createProduct(userId: number, dto: CreateProductDto) {
+    return this.create({
+      ...dto,
+      shop: { id: dto.shop_id } as any,
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} product`;
+  async updateProduct(
+    productId: number,
+    userId: number,
+    dto: UpdateProductDto,
+  ) {
+    return this.updateById(productId, dto);
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+  async deleteProduct(productId: number, userId: number) {
+    return this.deleteById(productId);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} product`;
+  findByShop(shopId: number) {
+    return this.repo.find({
+      where: { shop: { id: shopId } },
+      relations: ['images'],
+      order: { id: 'DESC' },
+    });
   }
 }

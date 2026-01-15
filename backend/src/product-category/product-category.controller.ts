@@ -1,34 +1,31 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete } from '@nestjs/common';
 import { ProductCategoryService } from './product-category.service';
 import { CreateProductCategoryDto } from './dto/create-product-category.dto';
-import { UpdateProductCategoryDto } from './dto/update-product-category.dto';
 
-@Controller('product-category')
+@Controller('product-categories')
 export class ProductCategoryController {
-  constructor(private readonly productCategoryService: ProductCategoryService) {}
+  constructor(private readonly service: ProductCategoryService) {}
 
   @Post()
-  create(@Body() createProductCategoryDto: CreateProductCategoryDto) {
-    return this.productCategoryService.create(createProductCategoryDto);
+  create(@Body() dto: CreateProductCategoryDto) {
+    return this.service.createRelation(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.productCategoryService.findAll();
+  @Get('product/:id')
+  findByProduct(@Param('id') id: number) {
+    return this.service.findByProduct(+id);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productCategoryService.findOne(+id);
+  @Get('category/:id')
+  findByCategory(@Param('id') id: number) {
+    return this.service.findByCategory(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductCategoryDto: UpdateProductCategoryDto) {
-    return this.productCategoryService.update(+id, updateProductCategoryDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.productCategoryService.remove(+id);
+  @Delete(':productId/:categoryId')
+  remove(
+    @Param('productId') productId: number,
+    @Param('categoryId') categoryId: number,
+  ) {
+    return this.service.deleteRelation(+productId, +categoryId);
   }
 }

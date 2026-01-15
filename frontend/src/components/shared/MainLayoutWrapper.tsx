@@ -1,11 +1,7 @@
 import Header from "@/src/components/shared/Header";
-import { usePathname } from "next/navigation";
 import React from "react";
 
 const MainLayoutWrapper = ({ children }: { children: React.ReactNode }) => {
-  const pathname = usePathname();
-
-  const isHome = pathname === "/";
   return (
     <div className="bg-gray-blackground">
       <Header />

@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { AssetType } from './enums/asset-type.enum';
-import { AVATAR_DIR, PRODUCT_DIR } from '@/common/constant/asset.constant';
+import {
+  AVATAR_DIR,
+  CATEGORY_DIR,
+  PRODUCT_DIR,
+  SHOP_DIR,
+} from '@/common/constant/asset.constant';
 
 @Injectable()
 export class AssetService {
@@ -10,6 +15,10 @@ export class AssetService {
         return AVATAR_DIR;
       case AssetType.PRODUCT:
         return PRODUCT_DIR;
+      case AssetType.SHOP:
+        return SHOP_DIR;
+      case AssetType.CATEGORY:
+        return CATEGORY_DIR;
       default:
         throw new Error('Invalid asset type');
     }

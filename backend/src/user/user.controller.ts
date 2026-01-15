@@ -13,6 +13,7 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Auth } from '@/common/decorators/auth.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
 @Controller('user')
 export class UserController {
@@ -20,8 +21,9 @@ export class UserController {
 
   @Auth()
   @Get('me')
-  async getMe(@Req() req) {
-    return this.userService.getMe(req.user.userId);
+  getMe(@CurrentUser() user) {
+    console.log(user, 'user');
+    return this.userService.getMe(user.sub);
   }
   @Post()
   create(@Body() createUserDto: CreateUserDto) {

@@ -3,7 +3,7 @@
 import { baseApi } from "@/src/common/config/baseApi";
 import { logout } from "../storage/auth.slice";
 import { clearMe } from "../storage/user.slice";
-
+const SCOPE = "buyer";
 export const authApi = baseApi
   .enhanceEndpoints({
     addTagTypes: ["Auth"],
@@ -13,7 +13,6 @@ export const authApi = baseApi
     endpoints: (builder) => ({
       register: builder.mutation<any, { email: string; password: string }>({
         query: (body) => {
-          console.log(body);
           return {
             url: "auth/register",
             method: "POST",
@@ -24,7 +23,7 @@ export const authApi = baseApi
       login: builder.mutation<any, { identifier: string; password: string }>({
         query: (body) => {
           return {
-            url: "auth/login",
+            url: `auth/${SCOPE}/login`,
             method: "POST",
             data: body,
           };
@@ -39,13 +38,13 @@ export const authApi = baseApi
       }),
       verify2FA: builder.mutation<any, { userId: number; token: string }>({
         query: (body) => ({
-          url: "auth/2fa/verify",
+          url: `auth/2fa/verify`,
           method: "POST",
           data: body,
         }),
       }),
       logout: builder.mutation<any, void>({
-        query: () => ({ url: "auth/logout", method: "POST" }),
+        query: () => ({ url: `auth/logout`, method: "POST" }),
         async onQueryStarted(_, { dispatch }) {
           dispatch(clearMe());
           dispatch(logout());
@@ -53,7 +52,7 @@ export const authApi = baseApi
         },
       }),
       logoutAll: builder.mutation<any, void>({
-        query: () => ({ url: "auth/logout-all", method: "POST" }),
+        query: () => ({ url: `auth/logout-all`, method: "POST" }),
         async onQueryStarted(_, { dispatch }) {
           dispatch(clearMe());
           dispatch(logout());
@@ -61,7 +60,7 @@ export const authApi = baseApi
         },
       }),
       refresh: builder.mutation<any, void>({
-        query: () => ({ url: "auth/refresh", method: "POST" }),
+        query: () => ({ url: `auth/refresh`, method: "POST" }),
       }),
     }),
   });
