@@ -13,7 +13,7 @@ import { extname } from 'path';
 import { AssetType } from './enums/asset-type.enum';
 import { AssetService } from './assets.service';
 import { Auth } from '@/common/decorators/auth.decorator';
-
+import type { Express } from 'express';
 @Controller('assets')
 export class AssetController {
   constructor(private readonly assetService: AssetService) {}
