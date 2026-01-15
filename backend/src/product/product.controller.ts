@@ -1,34 +1,48 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import { BaseController } from '@/base/base.controller';
+import { Product } from './entities/product.entity';
 import { ProductService } from './product.service';
+import { Auth } from '@/common/decorators/auth.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
-@Controller('product')
-export class ProductController {
-  constructor(private readonly productService: ProductService) {}
-
-  @Post()
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productService.create(createProductDto);
+@Controller('products')
+export class ProductController extends BaseController<Product> {
+  constructor(protected readonly service: ProductService) {
+    super(service);
+  }
+  @Get('shop/:shopId')
+  findByShop(@Param('shopId') shopId: string) {
+    return this.service.findByShop(+shopId);
+  }
+  @Auth()
+  @Post('seller')
+  createBySeller(@CurrentUser() user, @Body() dto: CreateProductDto) {
+    return this.service.createProduct(user.userId, dto);
   }
 
-  @Get()
-  findAll() {
-    return this.productService.findAll();
+  @Auth()
+  @Patch('seller/:id')
+  updateBySeller(
+    @Param('id') id: string,
+    @CurrentUser() user,
+    @Body() dto: UpdateProductDto,
+  ) {
+    return this.service.updateProduct(+id, user.userId, dto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productService.update(+id, updateProductDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.productService.remove(+id);
+  @Auth()
+  @Delete('seller/:id')
+  deleteBySeller(@Param('id') id: string, @CurrentUser() user) {
+    return this.service.deleteProduct(+id, user.userId);
   }
 }

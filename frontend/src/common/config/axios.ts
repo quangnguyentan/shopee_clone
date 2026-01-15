@@ -1,139 +1,64 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import axios from "axios";
-import { BaseQueryFn } from "@reduxjs/toolkit/query";
-import { logout } from "@/src/common/storage/auth.slice";
-import { AUTH_EXCLUDE_PATHS } from "../constants";
-import { getEnv } from "./env.client";
-import { clearMe, setMe } from "../storage/user.slice";
-import { socket } from "./socket";
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+import { refreshApi } from "./refreshApi";
+import { api, pageUnloading } from "./api";
 
-/**
- * Axios instance
- * - withCredentials: gửi HttpOnly cookie (accessToken, refreshToken)
- */
-const env = getEnv();
-export const api = axios.create({
-  baseURL: env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
-});
-
-declare module "axios" {
-  export interface AxiosRequestConfig {
-    _retry?: boolean;
-  }
-}
-
-/**
- * Refresh queue
- */
-let appStore: any;
-
-export const injectStore = (_store: any) => {
-  appStore = _store;
-};
-
+let appStore: A;
 let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (value?: any) => void;
-  reject: (reason?: any) => void;
-}> = [];
+let queue: ((err?: A) => void)[] = [];
 
-const processQueue = (error: any = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) prom.reject(error);
-    else prom.resolve(true);
-  });
-  failedQueue = [];
+export const injectStore = (store: A) => {
+  appStore = store;
 };
 
-/**
- * Response interceptor
- * - 401 → gọi /auth/refresh
- * - refresh OK → retry request cũ
- * - refresh FAIL → logout
- */
+const flushQueue = (err?: A) => {
+  queue.forEach((cb) => cb(err));
+  queue = [];
+};
+
 api.interceptors.response.use(
-  (response) => response,
+  (res) => res,
   async (error) => {
+    const original = error.config;
+    if (!original || !appStore) return Promise.reject(error);
+    if (pageUnloading) return Promise.reject(error);
+
+    if (original.url?.includes("/auth/refresh")) {
+      return Promise.reject(error);
+    }
+
+    const state = appStore.getState();
+
+    if (state.auth.bootstrapping) {
+      return Promise.reject(error);
+    }
+
+    if (error.response?.status !== 401 || original._retry) {
+      return Promise.reject(error);
+    }
+
+    original._retry = true;
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        queue.push((err) => {
+          if (err) reject(err);
+          else resolve(api(original));
+        });
+      });
+    }
+
+    isRefreshing = true;
+
     try {
-      const originalRequest = error.config;
-      if (!originalRequest) return Promise.reject(error);
-      const state = appStore.getState();
-      if (state.auth.loggedOut) return Promise.reject(error);
-      const status = error.response?.status;
-      const data = error.response?.data;
-      const isAuthExcluded = AUTH_EXCLUDE_PATHS.some((path) =>
-        originalRequest?.url?.includes(path)
-      );
+      await refreshApi.refresh();
+      flushQueue();
+      return api(original);
+    } catch (err) {
+      flushQueue(err);
 
-      if (
-        status === 401 &&
-        (data?.code === "AUTH.SESSION_REVOKED" ||
-          data?.code === "AUTH.INVALID_REFRESH_TOKEN")
-      ) {
-        appStore.dispatch(clearMe());
-        appStore.dispatch(logout());
-        if (socket.connected) socket.disconnect();
-        return Promise.reject(error);
-      }
-
-      if (status === 401 && !originalRequest._retry && !isAuthExcluded) {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
-          }).then(() => api(originalRequest));
-        }
-
-        originalRequest._retry = true;
-        isRefreshing = true;
-
-        try {
-          const { data: refreshData } = await api.post("/auth/refresh");
-          appStore.dispatch(
-            setMe({ user: refreshData.user, sessionId: refreshData.sessionId })
-          );
-          processQueue();
-          return api(originalRequest);
-        } catch (err) {
-          processQueue(err);
-          appStore.dispatch(clearMe());
-          appStore.dispatch(logout());
-          if (socket.connected) socket.disconnect();
-          return Promise.reject(err);
-        } finally {
-          isRefreshing = false;
-        }
-      }
-
-      return Promise.reject(error);
-    } catch (error) {
-      return Promise.reject(error);
+      return Promise.reject(err);
+    } finally {
+      isRefreshing = false;
     }
   }
 );
-
-/**
- * RTK Query baseQuery dùng Axios
- */
-type AxiosBaseQueryArgs = {
-  url: string;
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  data?: any;
-  params?: any;
-};
-
-export const axiosBaseQuery =
-  (): BaseQueryFn<AxiosBaseQueryArgs, unknown, unknown> =>
-  async ({ url, method, data, params }) => {
-    try {
-      const result = await api.request({ url, method, data, params });
-      return { data: result.data };
-    } catch (axiosError: any) {
-      return {
-        error: {
-          status: axiosError.response?.status,
-          data: axiosError.response?.data,
-        },
-      };
-    }
-  };

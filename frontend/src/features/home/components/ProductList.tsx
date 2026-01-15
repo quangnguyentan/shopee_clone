@@ -61,7 +61,7 @@ const ProductList = () => {
         <div className="flex justify-center py-6">
           <button
             onClick={() => push("/daily-discover?pageNumber=2")}
-            className="w-1/3 py-2 border border-gray-300 rounded-sm hover:bg-gray-100 transition text-black/60 text-sm"
+            className="w-1/3 py-2 border border-gray-300 rounded-sm hover:bg-gray-100 bg-white transition text-black/60 text-sm"
           >
             Xem thêm
           </button>

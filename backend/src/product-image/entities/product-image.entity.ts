@@ -1,3 +1,4 @@
+import { BaseEntity } from '@/base/base.entity';
 import { Product } from 'src/product/entities/product.entity';
 import {
   Column,
@@ -8,10 +9,7 @@ import {
 } from 'typeorm';
 
 @Entity('product_images')
-export class ProductImage {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: number;
-
+export class ProductImage extends BaseEntity {
   @ManyToOne(() => Product)
   @JoinColumn({ name: 'product_id' })
   product: Product;

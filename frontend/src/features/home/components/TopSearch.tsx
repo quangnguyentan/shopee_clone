@@ -31,7 +31,9 @@ const TopSearch = () => {
         <Carousel
           opts={{
             align: "start",
-            containScroll: "trimSnaps",
+            containScroll: false,
+            dragFree: true,
+            skipSnaps: true,
             slidesToScroll: 4,
           }}
           className="w-full"
@@ -51,6 +53,8 @@ const TopSearch = () => {
                       >
                         <div className="w-[90%] h-44 relative">
                           <Image
+                            draggable={false}
+                            priority
                             src={product_1}
                             alt="product_1"
                             className="w-full h-full object-cover"

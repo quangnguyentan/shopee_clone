@@ -1,3 +1,4 @@
+import { BaseEntity } from '@/base/base.entity';
 import { Product } from 'src/product/entities/product.entity';
 import { User } from 'src/user/entities/user.entity';
 import {
@@ -11,10 +12,7 @@ import {
 } from 'typeorm';
 
 @Entity('shops')
-export class Shop {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: number;
-
+export class Shop extends BaseEntity {
   @OneToOne(() => User, (user) => user.shop)
   @JoinColumn({ name: 'user_id' })
   user: User;
@@ -36,7 +34,4 @@ export class Shop {
 
   @OneToMany(() => Product, (product) => product.shop)
   products: Product[];
-
-  @CreateDateColumn()
-  created_at: Date;
 }

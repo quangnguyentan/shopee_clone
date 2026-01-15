@@ -1,34 +1,38 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+// shop/shop.controller.ts
+import { Body, Controller, Delete, Param, Patch, Post } from '@nestjs/common';
 import { ShopService } from './shop.service';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
+import { BaseController } from '@/base/base.controller';
+import { Shop } from './entities/shop.entity';
+import { Auth } from '@/common/decorators/auth.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
-@Controller('shop')
-export class ShopController {
-  constructor(private readonly shopService: ShopService) {}
+@Controller('shops')
+export class ShopController extends BaseController<Shop> {
+  constructor(protected readonly service: ShopService) {
+    super(service);
+  }
 
+  @Auth()
   @Post()
-  create(@Body() createShopDto: CreateShopDto) {
-    return this.shopService.create(createShopDto);
+  createShop(@CurrentUser() user, @Body() dto: CreateShopDto) {
+    return this.service.createShop(user.userId, dto);
   }
 
-  @Get()
-  findAll() {
-    return this.shopService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.shopService.findOne(+id);
-  }
-
+  @Auth()
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateShopDto: UpdateShopDto) {
-    return this.shopService.update(+id, updateShopDto);
+  updateShop(
+    @Param('id') id: string,
+    @CurrentUser() user,
+    @Body() dto: UpdateShopDto,
+  ) {
+    return this.service.updateShop(+id, user.userId, dto);
   }
 
+  @Auth()
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.shopService.remove(+id);
+  deleteShop(@Param('id') id: string, @CurrentUser() user) {
+    return this.service.deleteShop(+id, user.userId);
   }
 }

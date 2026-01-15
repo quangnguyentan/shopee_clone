@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, LessThan, Repository } from 'typeorm';
 import { User } from '@/user/entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { SessionsService } from '@/session/session.service';
-import { Session } from '@/session/entities/session.entity';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -14,19 +13,22 @@ import { randomUUID } from 'crypto';
 import {
   generateAccessToken,
   generateRefreshToken,
-  verifyToken,
+  verifyRefreshToken,
 } from '@/middleware/jwt';
 import { AppException } from '@/common/exceptions/app.exception';
 import { AUTH_ERROR } from '@/common/errors/auth.error';
 import { RegisterDto } from './dto/register.dto';
 import { generateFromEmail } from 'unique-username-generator';
 import { AVATAR_DEFAULT } from '@/common/constant/asset.constant';
+import { Cron } from '@nestjs/schedule';
 
 const QR_EXPIRE_MS = 60 * 1000;
 const qrSessions = new Map<
   string,
   { status: 'PENDING' | 'VERIFIED'; userId: string | null; createdAt: number }
 >();
+
+export type AuthScope = 'admin' | 'buyer' | 'seller';
 
 @Injectable()
 export class AuthService {
@@ -96,6 +98,7 @@ export class AuthService {
     userAgent: string,
     ip: string,
     res: Response,
+    scope: AuthScope,
   ) {
     const user = await this.userRepo.findOne({ where: { email: identifier } });
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
@@ -112,81 +115,112 @@ export class AuthService {
       deviceType,
       userAgent,
     });
-    return await this.issueTokens(user, session.id, res);
+    return await this.issueTokens(
+      this.refreshRepo.manager,
+      user,
+      session.id,
+      res,
+      scope,
+    );
   }
-
-  async refreshToken(oldToken: string, res: Response) {
-    let payload: any;
-    try {
-      payload = verifyToken(oldToken);
-    } catch {
+  async refreshToken(refreshToken: string, res: Response) {
+    if (!refreshToken) {
+      this.clearAllAuthCookies(res);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
-    const token = await this.refreshRepo.findOne({
+    let payload: any;
+    try {
+      payload = verifyRefreshToken(refreshToken);
+    } catch {
+      this.clearAllAuthCookies(res);
+      throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
+    }
+    const oldToken = await this.refreshRepo.findOne({
       where: {
         jti: payload.jti,
         sessionId: payload.sessionId,
+        revoked: false,
       },
     });
-    if (!token) throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
-
-    const isMatch = await bcrypt.compare(oldToken, token.token_hash);
+    if (!oldToken) {
+      this.clearAllAuthCookies(res);
+      throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
+    }
+    const isMatch = await bcrypt.compare(refreshToken, oldToken.token_hash);
     if (!isMatch) {
+      this.clearAllAuthCookies(res);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
 
     const session = await this.sessionsService.findById(payload.sessionId);
     if (!session || session.revoked) {
-      await this.refreshRepo.delete({ sessionId: payload.sessionId });
-      res.clearCookie('accessToken', {
-        secure: true,
-        sameSite: 'none',
-        path: '/',
-      });
-
-      res.clearCookie('refreshToken', {
-        secure: true,
-        sameSite: 'none',
-        path: '/',
-      });
+      this.clearAllAuthCookies(res);
       throw new AppException(AUTH_ERROR.SESSION_REVOKED);
     }
 
     const user = await this.userRepo.findOneBy({ id: session.userId });
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+    return this.refreshRepo.manager.transaction(async (manager) => {
+      const result = await this.issueTokens(
+        manager,
+        user,
+        session.id,
+        res,
+        payload.scope,
+      );
 
-    await this.refreshRepo.delete({ id: token.id });
+      await manager.update(
+        RefreshToken,
+        { id: oldToken.id },
+        { revoked: true },
+      );
 
-    return this.issueTokens(user, session.id, res);
+      return result;
+    });
   }
-
-  private clearAuthCookies(res: Response) {
-    res.clearCookie('accessToken', {
+  @Cron('0 3 * * *')
+  async cleanupRevokedTokens() {
+    await this.refreshRepo.delete({
+      revoked: true,
+      created_at: LessThan(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+    });
+  }
+  private clearAuthCookies(res: Response, scope: AuthScope) {
+    const { access, refresh } = this.getAuthCookieNames(scope);
+    const domain = this.getCookieDomain(scope);
+    res.clearCookie(access, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
+      domain,
     });
 
-    res.clearCookie('refreshToken', {
+    res.clearCookie(refresh, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
+      domain,
     });
   }
 
+  private clearAllAuthCookies(res: Response) {
+    (['admin', 'buyer', 'seller'] as AuthScope[]).forEach((scope) =>
+      this.clearAuthCookies(res, scope),
+    );
+  }
   async logoutByRefresh(refreshToken: string, res: Response) {
     if (!refreshToken) {
-      this.clearAuthCookies(res);
+      this.clearAllAuthCookies(res);
       return { success: true };
     }
 
     let payload: any;
     try {
-      payload = verifyToken(refreshToken);
+      payload = verifyRefreshToken(refreshToken);
     } catch {
-      this.clearAuthCookies(res);
+      this.clearAllAuthCookies(res);
       return { success: true };
     }
 
@@ -195,27 +229,27 @@ export class AuthService {
     });
     await this.refreshRepo.delete({ sessionId: payload.sessionId });
 
-    this.clearAuthCookies(res);
+    this.clearAuthCookies(res, payload.scope);
     return { success: true };
   }
 
   async logoutAllByRefresh(refreshToken: string, res: Response) {
     if (!refreshToken) {
-      this.clearAuthCookies(res);
+      this.clearAllAuthCookies(res);
       return { success: true };
     }
 
     let payload: any;
     try {
-      payload = verifyToken(refreshToken);
+      payload = verifyRefreshToken(refreshToken);
     } catch {
-      this.clearAuthCookies(res);
+      this.clearAllAuthCookies(res);
       return { success: true };
     }
 
     const session = await this.sessionsService.findById(payload.sessionId);
     if (!session) {
-      this.clearAuthCookies(res);
+      this.clearAllAuthCookies(res);
       return { success: true };
     }
 
@@ -225,7 +259,7 @@ export class AuthService {
       session: { userId: session.userId },
     });
 
-    this.clearAuthCookies(res);
+    this.clearAllAuthCookies(res);
     return { success: true };
   }
 
@@ -243,34 +277,60 @@ export class AuthService {
       },
     };
   }
+  getAuthCookieNames(scope: AuthScope) {
+    return {
+      access: `${scope}_access_token`,
+      refresh: `${scope}_refresh_token`,
+    };
+  }
 
-  private async issueTokens(user: User, sessionId: string, res: Response) {
-    const accessToken = generateAccessToken(user, sessionId);
-    const { token: refreshToken, jti } = generateRefreshToken(user, sessionId);
+  private getCookieDomain(scope: AuthScope): string | undefined {
+    if (process.env.NODE_ENV === 'production') {
+      return '.myapp.com';
+    }
+
+    return undefined;
+  }
+
+  private async issueTokens(
+    manager: EntityManager,
+    user: User,
+    sessionId: string,
+    res: Response,
+    scope: AuthScope,
+  ) {
+    const { access, refresh } = this.getAuthCookieNames(scope);
+    const domain = this.getCookieDomain(scope);
+    const accessToken = generateAccessToken(user, sessionId, scope);
+    const { token: refreshToken, jti } = generateRefreshToken(
+      user,
+      sessionId,
+      scope,
+    );
     const tokenHash = await bcrypt.hash(refreshToken, 10);
-    await this.refreshRepo.manager.transaction(async (manager) => {
-      await manager.delete(RefreshToken, { sessionId });
-      const newToken = manager.create(RefreshToken, {
-        sessionId,
-        token_hash: tokenHash,
-        revoked: false,
-        jti,
-      });
-      await manager.save(newToken);
+    const newToken = manager.create(RefreshToken, {
+      sessionId,
+      token_hash: tokenHash,
+      revoked: false,
+      jti,
     });
 
-    res.cookie('accessToken', accessToken, {
+    await manager.save(newToken);
+
+    res.cookie(access, accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
+      domain,
       maxAge: 15 * 60 * 1000,
     });
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie(refresh, refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
+      domain,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -292,7 +352,12 @@ export class AuthService {
     return { qr, secret: secret.base32 };
   }
 
-  async verify2FA(userId: number, token: string, res: Response) {
+  async verify2FA(
+    userId: number,
+    token: string,
+    res: Response,
+    scope: AuthScope,
+  ) {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user || !user.two_factor_secret)
       throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
@@ -313,7 +378,13 @@ export class AuthService {
       ip: '2FA',
       deviceType: 'desktop',
     });
-    return this.issueTokens(user, session.id, res);
+    return this.issueTokens(
+      this.refreshRepo.manager,
+      user,
+      session.id,
+      res,
+      scope,
+    );
   }
 
   async requestChangePassword(userId: number) {

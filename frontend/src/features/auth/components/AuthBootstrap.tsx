@@ -6,12 +6,19 @@ import {
   useAppDispatch,
   useAppSelector,
 } from "@/src/common/hooks/useAppSelector";
-import { finishBootstrap, logout } from "@/src/common/storage/auth.slice";
+import {
+  finishBootstrap,
+  loginSuccess,
+  logout,
+  startBootstrap,
+} from "@/src/common/storage/auth.slice";
 import { clearMe, setMe } from "@/src/common/storage/user.slice";
 import { socket } from "@/src/common/config/socket";
 import { toast } from "sonner";
 import { useSingleTabGuard } from "@/src/common/hooks/useSingleTabGuard";
-import { useRefreshMutation } from "@/src/common/api/auth.api";
+import { persistor } from "@/src/common/storage";
+import { refreshApi } from "@/src/common/config/refreshApi";
+import { Loading } from "@/src/components/shared/Loading";
 
 export default function AuthBootstrap({
   children,
@@ -19,65 +26,53 @@ export default function AuthBootstrap({
   children: React.ReactNode;
 }) {
   const dispatch = useAppDispatch();
-  const { sessionId } = useAppSelector((s) => s.user);
-  const loggedOut = useAppSelector((s) => s.auth.loggedOut);
+  const ran = useRef(false);
   const blocked = useSingleTabGuard();
-  const ranBootstrap = useRef(false);
 
-  const [refresh] = useRefreshMutation();
+  const { bootstrapped } = useAppSelector((s) => s.auth);
+  const sessionId = useAppSelector((s) => s.user.sessionId);
 
   useEffect(() => {
-    if (ranBootstrap.current || loggedOut) {
-      dispatch(finishBootstrap());
-      return;
-    }
-
-    ranBootstrap.current = true;
-
-    const trySilentRefresh = async () => {
+    if (ran.current) return;
+    ran.current = true;
+    dispatch(startBootstrap());
+    (async () => {
       try {
-        const res = await refresh().unwrap();
-        dispatch(setMe({ user: res.user, sessionId: res.sessionId }));
+        const res = await refreshApi.refresh();
+        const { authenticated, user, sessionId } = res.data;
+
+        if (!authenticated) throw new Error();
+
+        dispatch(setMe({ user, sessionId }));
+        dispatch(loginSuccess());
       } catch {
         dispatch(clearMe());
         dispatch(logout());
       } finally {
         dispatch(finishBootstrap());
       }
-    };
-
-    trySilentRefresh();
-  }, [dispatch, loggedOut, sessionId, refresh]);
+    })();
+  }, [dispatch]);
 
   useEffect(() => {
     if (!sessionId) return;
 
-    const registerSession = () => {
-      if (!socket.connected) {
-        socket.connect();
-        socket.once("connect", () =>
-          socket.emit("register_session", sessionId)
-        );
-      } else {
-        socket.emit("register_session", sessionId);
-      }
-    };
-
-    registerSession();
-
-    return () => {
-      socket.off("connect", registerSession);
-    };
+    if (!socket.connected) {
+      socket.connect();
+      socket.once("connect", () => socket.emit("register_session", sessionId));
+    } else {
+      socket.emit("register_session", sessionId);
+    }
   }, [sessionId]);
 
   useEffect(() => {
-    const handleForceLogout = async (data: any) => {
+    const handleForceLogout = (data: A) => {
       if (data?.sessionId === sessionId) return;
 
       toast.error(data?.reason ?? "Session expired");
-
       dispatch(clearMe());
       dispatch(logout());
+      persistor.purge();
 
       if (socket.connected) socket.disconnect();
     };
@@ -110,6 +105,8 @@ export default function AuthBootstrap({
       </div>
     );
   }
+
+  if (!bootstrapped) return <Loading />;
 
   return <>{children}</>;
 }

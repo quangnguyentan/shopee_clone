@@ -1,20 +1,10 @@
+import { BaseEntity } from '@/base/base.entity';
 import { Order } from 'src/order/entities/order.entity';
 import { Shop } from 'src/shop/entities/shop.entity';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToOne,
-  OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Entity, Column, OneToOne, OneToMany } from 'typeorm';
 
 @Entity('users')
-export class User {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: number;
-
+export class User extends BaseEntity {
   @Column({ unique: true })
   email: string;
 
@@ -44,10 +34,4 @@ export class User {
 
   @OneToMany(() => Order, (order) => order.user)
   orders: Order[];
-
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn()
-  updated_at: Date;
 }

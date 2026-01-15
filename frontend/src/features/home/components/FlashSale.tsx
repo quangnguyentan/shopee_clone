@@ -16,7 +16,10 @@ import phone from "@/src/assest/phone.jpg";
 import mall from "@/src/assest/mall.png";
 import shop_mall_voucher from "@/src/assest/shop_mall_voucher.png";
 import Image from "next/image";
-import { BsLightningFill } from "@/src/components/shared/Icon";
+import {
+  BsLightningFill,
+  IoIosArrowForward,
+} from "@/src/components/shared/Icon";
 const END_TIME = Date.now() + 120 * 60 * 1000;
 
 const FlashSale = () => {
@@ -41,30 +44,39 @@ const FlashSale = () => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-3 px-4 pt-4">
-        <div
-          className="bg-no-repeat bg-center"
-          style={{
-            width: 130,
-            height: 30,
-            backgroundImage: `url(${flash_sale.src})`,
-            backgroundSize: "130px 30px",
-          }}
-        />
-
-        <div className="flex items-center gap-1">
-          <TimeBox value={pad(h)} />
-          <Colon />
-          <TimeBox value={pad(m)} />
-          <Colon />
-          <TimeBox value={pad(s)} />
-        </div>
-      </div>
       <div>
+        <div className="flex items-center justify-between px-4">
+          <div className="flex items-center gap-3 pt-4">
+            <div
+              className="bg-no-repeat bg-center"
+              style={{
+                width: 130,
+                height: 30,
+                backgroundImage: `url(${flash_sale.src})`,
+                backgroundSize: "130px 30px",
+              }}
+            />
+
+            <div className="flex items-center gap-1">
+              <TimeBox value={pad(h)} />
+              <Colon />
+              <TimeBox value={pad(m)} />
+              <Colon />
+              <TimeBox value={pad(s)} />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-1 text-red-secondary cursor-pointer">
+            <span className="text-sm">Xem Tất Cả</span>
+            <IoIosArrowForward size={14} />
+          </div>
+        </div>
         <Carousel
           opts={{
             align: "start",
-            containScroll: "trimSnaps",
+            containScroll: false,
+            dragFree: true,
+            skipSnaps: true,
             slidesToScroll: 4,
           }}
           className="w-full"
@@ -87,6 +99,8 @@ const FlashSale = () => {
                             src={phone}
                             alt="phone"
                             className="w-full h-full object-cover"
+                            priority
+                            draggable={false}
                           />
                           <div className="absolute top-0 right-0 bg-yellow-primary text-lightning flex items-center gap-1 rounded-bl-md">
                             <BsLightningFill size={14} />
