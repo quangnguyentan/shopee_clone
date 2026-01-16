@@ -123,16 +123,16 @@ export class AuthService {
       scope,
     );
   }
-  async refreshToken(refreshToken: string, res: Response) {
+  async refreshToken(refreshToken: string, res: Response, scope: AuthScope) {
     if (!refreshToken) {
-      this.clearAllAuthCookies(res);
+      this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
     let payload: any;
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch {
-      this.clearAllAuthCookies(res);
+      this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
     const oldToken = await this.refreshRepo.findOne({
@@ -143,18 +143,18 @@ export class AuthService {
       },
     });
     if (!oldToken) {
-      this.clearAllAuthCookies(res);
+      this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
     const isMatch = await bcrypt.compare(refreshToken, oldToken.token_hash);
     if (!isMatch) {
-      this.clearAllAuthCookies(res);
+      this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
 
     const session = await this.sessionsService.findById(payload.sessionId);
     if (!session || session.revoked) {
-      this.clearAllAuthCookies(res);
+      this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.SESSION_REVOKED);
     }
 
@@ -187,13 +187,11 @@ export class AuthService {
   }
   private clearAuthCookies(res: Response, scope: AuthScope) {
     const { access, refresh } = this.getAuthCookieNames(scope);
-    const domain = this.getCookieDomain(scope);
     res.clearCookie(access, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
-      domain,
     });
 
     res.clearCookie(refresh, {
@@ -201,7 +199,6 @@ export class AuthService {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
-      domain,
     });
   }
 
@@ -284,14 +281,6 @@ export class AuthService {
     };
   }
 
-  private getCookieDomain(scope: AuthScope): string | undefined {
-    if (process.env.NODE_ENV === 'production') {
-      return '.myapp.com';
-    }
-
-    return undefined;
-  }
-
   private async issueTokens(
     manager: EntityManager,
     user: User,
@@ -300,7 +289,6 @@ export class AuthService {
     scope: AuthScope,
   ) {
     const { access, refresh } = this.getAuthCookieNames(scope);
-    const domain = this.getCookieDomain(scope);
     const accessToken = generateAccessToken(user, sessionId, scope);
     const { token: refreshToken, jti } = generateRefreshToken(
       user,
@@ -322,7 +310,6 @@ export class AuthService {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
-      domain,
       maxAge: 15 * 60 * 1000,
     });
     res.cookie(refresh, refreshToken, {
@@ -330,7 +317,6 @@ export class AuthService {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
-      domain,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
