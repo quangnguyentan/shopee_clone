@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { refreshApi } from "./refreshApi";
 import { api, pageUnloading } from "./api";
+import { AUTH_SCOPE } from "../constants";
 
 let appStore: A;
 let isRefreshing = false;
@@ -22,7 +23,7 @@ api.interceptors.response.use(
     if (!original || !appStore) return Promise.reject(error);
     if (pageUnloading) return Promise.reject(error);
 
-    if (original.url?.includes("/auth/refresh")) {
+    if (original.url?.includes(`/auth/${AUTH_SCOPE}/refresh`)) {
       return Promise.reject(error);
     }
 

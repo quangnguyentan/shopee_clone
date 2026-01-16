@@ -3,6 +3,7 @@
 import { baseApi } from "@/src/common/config/baseApi";
 import { logout } from "../storage/auth.slice";
 import { clearMe } from "../storage/user.slice";
+import { AUTH_SCOPE } from "../constants";
 const SCOPE = "buyer";
 export const authApi = baseApi
   .enhanceEndpoints({
@@ -60,7 +61,7 @@ export const authApi = baseApi
         },
       }),
       refresh: builder.mutation<any, void>({
-        query: () => ({ url: `auth/refresh`, method: "POST" }),
+        query: () => ({ url: `auth/${AUTH_SCOPE}/refresh`, method: "POST" }),
       }),
     }),
   });
