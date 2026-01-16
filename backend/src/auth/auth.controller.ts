@@ -80,7 +80,7 @@ export class AuthController {
     }
 
     const refreshToken = req.cookies?.[`${scope}_refresh_token`];
-    return this.authService.refreshToken(refreshToken, res);
+    return this.authService.refreshToken(refreshToken, res, scope);
   }
 
   @Post('logout')
