@@ -5,11 +5,11 @@ import type { Product } from "@/common/types/product.type";
 import { useGetProductByIdQuery } from "@/common/api/product.api";
 import Loading from "@/components/Loading";
 import { getAssetUrl } from "@/common/utils/assets";
-import Uploader, { type UploadFileWithPrimary } from "@/components/Uploader";
+import Uploader, { type UploadFileWithExtra } from "@/components/Uploader";
 import type { UploadFileStatus } from "antd/es/upload/interface";
 
 type ProductFormValues = Omit<Product, "images"> & {
-  images: UploadFileWithPrimary[];
+  images: UploadFileWithExtra[];
 };
 
 const FormPage = () => {
@@ -136,7 +136,7 @@ const FormPage = () => {
               if (!value || value.length === 0) {
                 return Promise.reject("Please upload product image");
               }
-              if (!value.some((v: UploadFileWithPrimary) => v.isPrimary)) {
+              if (!value.some((v: UploadFileWithExtra) => v.isPrimary)) {
                 return Promise.reject("Please select a primary image");
               }
               return Promise.resolve();
