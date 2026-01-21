@@ -6,6 +6,7 @@ import { ProductImage } from './entities/product-image.entity';
 import { Product } from 'src/product/entities/product.entity';
 import { join } from 'path';
 import { unlink } from 'fs/promises';
+import { PaginationDto } from '@/base/base.dto';
 
 @Injectable()
 export class ProductImageService extends BaseService<ProductImage> {
@@ -17,6 +18,23 @@ export class ProductImageService extends BaseService<ProductImage> {
     private readonly productRepo: Repository<Product>,
   ) {
     super(repo);
+  }
+
+  async findAll(query?: PaginationDto) {
+    return super.findAll(query, {
+      relations: ['product'],
+    });
+  }
+
+  async findOneById(id: number) {
+    const image = await this.repo.findOne({
+      where: { id },
+      relations: ['product'],
+    });
+    if (!image) {
+      throw new NotFoundException('Product image not found');
+    }
+    return image;
   }
 
   async createImage(dto: {

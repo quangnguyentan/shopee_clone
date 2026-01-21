@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+
+@layer base {
+  :root {
+    --font-sans: "Open Sans", "Segoe UI", "Helvetica Neue", Helvetica, Arial,
+      sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+  }
+}
+
 /* animations */
 @keyframes fadeInLeft {
   from {
@@ -49,3 +61,18 @@
 .delay-1000 {
   animation-delay: 1s;
 }
+
+
+.purple-gradient {
+  background: linear-gradient(90deg, #4B5E8A, #2E3F5E);
+}
+
+.blue-cyan {
+  background: linear-gradient(90deg, #2ED3F5, #1BA6E8);
+}
+
+.green-gradient {
+  background: linear-gradient(90deg, #3BCB9A, #1FA971);
+}
+
+

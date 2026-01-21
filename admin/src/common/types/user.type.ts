@@ -1,7 +1,7 @@
 type Role = "buyer" | "seller" | "admin";
 
 export interface User {
-  id: number;
+  id: A;
 
   email: string;
 

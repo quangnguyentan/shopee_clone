@@ -10,6 +10,7 @@ import { BaseService } from '@/base/base.service';
 import { Shop } from './entities/shop.entity';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
+import { PaginationDto } from '@/base/base.dto';
 
 @Injectable()
 export class ShopService extends BaseService<Shop> {
@@ -18,6 +19,18 @@ export class ShopService extends BaseService<Shop> {
     repo: Repository<Shop>,
   ) {
     super(repo);
+  }
+
+  async findAll(query?: PaginationDto) {
+    return super.findAll(query, {
+      relations: ['user', 'products'],
+    });
+  }
+  async findOneById(id: number) {
+    return this.repo.findOne({
+      where: { id },
+      relations: ['user', 'products'],
+    });
   }
 
   async createShop(userId: number, dto: CreateShopDto) {

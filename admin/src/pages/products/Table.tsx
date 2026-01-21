@@ -1,40 +1,57 @@
 import GenericTable from "../../components/Table";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-}
-
-const products: Product[] = [
-  { id: "p1", name: "iPhone", price: 1000, category: "Phone" },
-  { id: "p2", name: "MacBook", price: 2000, category: "Laptop" },
-];
+import useTableData from "./useTableData";
+import { Button, Spin } from "antd";
+import TableSkeleton from "@/components/TableSkeleton";
+import { useEffect } from "react";
+import NProgress from "@/common/utils/nprogress";
+import type { Product } from "@/common/types/product.type";
 
 export const Table = () => {
+  const {
+    columns,
+    products,
+    isLoading,
+    isFetching,
+    toolbarActions,
+    rowSelection,
+  } = useTableData();
+  const showLoading = isLoading || isFetching;
+  useEffect(() => {
+    if (showLoading) {
+      NProgress.start();
+    } else {
+      NProgress.done();
+    }
+  }, [showLoading]);
+
+  if (isLoading) {
+    return <TableSkeleton />;
+  }
+
   return (
-    <GenericTable<Product>
-      rowKey="id"
-      data={products}
-      columns={[
-        {
-          title: "Product Name",
-          dataIndex: "name",
-          searchable: true,
-        },
-        {
-          title: "Price",
-          dataIndex: "price",
-          searchable: true,
-          sorter: (a, b) => a.price - b.price,
-        },
-        {
-          title: "Category",
-          dataIndex: "category",
-          searchable: true,
-        },
-      ]}
-    />
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-start h-8">
+        {toolbarActions.map((a) => (
+          <Button
+            key={a.key}
+            type={a.type}
+            danger={a.danger}
+            onClick={a.onClick}
+            className="rounded-full! mx-1 w-20 h-full"
+          >
+            {a.label}
+          </Button>
+        ))}
+      </div>
+
+      <Spin spinning={isFetching}>
+        <GenericTable<Product>
+          rowKey="id"
+          data={products}
+          columns={columns as A}
+          rowSelection={rowSelection}
+        />
+      </Spin>
+    </div>
   );
 };
