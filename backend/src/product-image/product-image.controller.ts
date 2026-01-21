@@ -10,10 +10,24 @@ import {
 import { ProductImageService } from './product-image.service';
 import { CreateProductImageDto } from './dto/create-product-image.dto';
 import { Auth } from '@/common/decorators/auth.decorator';
+import { BaseController } from '@/base/base.controller';
+import { ProductImage } from './entities/product-image.entity';
 
 @Controller('product-images')
-export class ProductImageController {
-  constructor(private readonly service: ProductImageService) {}
+export class ProductImageController extends BaseController<ProductImage> {
+  constructor(protected readonly service: ProductImageService) {
+    super(service);
+  }
+
+  @Get()
+  findAll() {
+    return this.service.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOneById(+id);
+  }
 
   @Post()
   create(@Body() dto: CreateProductImageDto) {
@@ -28,15 +42,5 @@ export class ProductImageController {
   @Patch(':id/set-primary')
   setPrimary(@Param('id') id: number) {
     return this.service.setPrimary(+id);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: number) {
-    return this.service.deleteById(+id);
-  }
-  @Auth()
-  @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.service.deleteImage(+id);
   }
 }

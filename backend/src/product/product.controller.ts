@@ -14,6 +14,7 @@ import { Auth } from '@/common/decorators/auth.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { AuthRole } from '@/common/decorators/auth-role.decorator';
 
 @Controller('products')
 export class ProductController extends BaseController<Product> {
@@ -44,5 +45,17 @@ export class ProductController extends BaseController<Product> {
   @Delete('seller/:id')
   deleteBySeller(@Param('id') id: string, @CurrentUser() user) {
     return this.service.deleteProduct(+id, user.userId);
+  }
+
+  @AuthRole('admin')
+  @Get()
+  findAll() {
+    return this.service.findAll();
+  }
+
+  @AuthRole('admin')
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOneById(+id);
   }
 }

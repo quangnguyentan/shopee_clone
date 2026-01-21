@@ -1,4 +1,4 @@
-import { Repository, DeepPartial } from 'typeorm';
+import { Repository, DeepPartial, FindManyOptions } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { BaseEntity } from './base.entity';
 import { PaginationDto } from './base.dto';
@@ -11,7 +11,10 @@ export class BaseService<T extends BaseEntity> {
     return this.repo.save(entity);
   }
 
-  async findAll(query?: PaginationDto) {
+  async findAll(
+    query?: PaginationDto,
+    options?: Omit<FindManyOptions<T>, 'take' | 'skip'>,
+  ) {
     const page = query?.page ?? 1;
     const limit = query?.limit ?? 10;
     const skip = (page - 1) * limit;
@@ -20,6 +23,7 @@ export class BaseService<T extends BaseEntity> {
       take: limit,
       skip,
       order: { id: 'DESC' } as any,
+      ...options,
     });
 
     return { items, total, page, limit };

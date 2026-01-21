@@ -1,26 +1,53 @@
-export const data = {
-  labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
-  datasets: [
-    {
-      label: "# of Votes",
-      data: [12, 19, 3, 5, 2, 3],
-      backgroundColor: [
-        "rgba(255, 99, 132, 0.2)",
-        "rgba(54, 162, 235, 0.2)",
-        "rgba(255, 206, 86, 0.2)",
-        "rgba(75, 192, 192, 0.2)",
-        "rgba(153, 102, 255, 0.2)",
-        "rgba(255, 159, 64, 0.2)",
+import { useMemo } from "react";
+import type { ChartData, ChartOptions } from "chart.js";
+
+const useChartData = () => {
+  const data = useMemo<ChartData<"bar", number[], string>>(
+    () => ({
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
+      datasets: [
+        {
+          label: "Orders",
+          data: [120, 150, 180, 90, 200, 170, 220],
+          backgroundColor: "#ef4444",
+        },
+        {
+          label: "Completed",
+          data: [100, 130, 160, 80, 180, 150, 200],
+          backgroundColor: "#3b82f6",
+        },
+        {
+          label: "Cancelled",
+          data: [20, 20, 20, 10, 20, 20, 20],
+          backgroundColor: "#22c55e",
+        },
       ],
-      borderColor: [
-        "rgba(255, 99, 132, 1)",
-        "rgba(54, 162, 235, 1)",
-        "rgba(255, 206, 86, 1)",
-        "rgba(75, 192, 192, 1)",
-        "rgba(153, 102, 255, 1)",
-        "rgba(255, 159, 64, 1)",
-      ],
-      borderWidth: 1,
-    },
-  ],
+    }),
+    []
+  );
+
+  const options = useMemo<ChartOptions<"bar">>(
+    () => ({
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "Sales Report",
+        },
+        legend: {
+          position: "top",
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+        },
+      },
+    }),
+    []
+  );
+
+  return { data, options };
 };
+
+export default useChartData;

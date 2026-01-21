@@ -14,11 +14,22 @@ import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { BaseController } from '@/base/base.controller';
 import { ProductVariant } from './entities/product-variant.entity';
 import { Auth } from '@/common/decorators/auth.decorator';
+import { AuthRole } from '@/common/decorators/auth-role.decorator';
 
 @Controller('product-variants')
 export class ProductVariantController extends BaseController<ProductVariant> {
   constructor(protected readonly service: ProductVariantService) {
     super(service);
+  }
+
+  @Get()
+  findAll() {
+    return this.service.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOneById(+id);
   }
 
   @Auth()

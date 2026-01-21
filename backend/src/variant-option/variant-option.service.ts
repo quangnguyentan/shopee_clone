@@ -7,6 +7,7 @@ import { VariantOption } from './entities/variant-option.entity';
 import { ProductVariant } from 'src/product-variant/entities/product-variant.entity';
 import { UpdateVariantOptionDto } from './dto/update-variant-option.dto';
 import { CreateVariantOptionWithVariantDto } from './dto/create-variant-option-with-variant.dto';
+import { PaginationDto } from '@/base/base.dto';
 
 @Injectable()
 export class VariantOptionService extends BaseService<VariantOption> {
@@ -18,6 +19,23 @@ export class VariantOptionService extends BaseService<VariantOption> {
     private readonly variantRepo: Repository<ProductVariant>,
   ) {
     super(repo);
+  }
+
+  async findAll(query?: PaginationDto) {
+    return super.findAll(query, {
+      relations: ['variant', 'variant.product'],
+    });
+  }
+
+  async findOneById(id: number) {
+    const option = await this.repo.findOne({
+      where: { id },
+      relations: ['variant', 'variant.product'],
+    });
+    if (!option) {
+      throw new NotFoundException('Variant option not found');
+    }
+    return option;
   }
 
   async createOption(dto: CreateVariantOptionWithVariantDto) {

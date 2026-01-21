@@ -21,6 +21,16 @@ export class VariantOptionController extends BaseController<VariantOption> {
     super(service);
   }
 
+  @Get()
+  findAll() {
+    return this.service.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOneById(+id);
+  }
+
   @Auth()
   @Post()
   create(@Body() dto: CreateVariantOptionWithVariantDto) {

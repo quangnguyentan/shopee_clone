@@ -14,6 +14,9 @@ import {
 
 @Entity('products')
 export class Product extends BaseEntity {
+  @Column()
+  shop_id: number;
+
   @ManyToOne(() => Shop, (shop) => shop.products)
   @JoinColumn({ name: 'shop_id' })
   shop: Shop;
@@ -24,10 +27,20 @@ export class Product extends BaseEntity {
   @Column({ type: 'text' })
   description: string;
 
-  @Column('decimal')
+  @Column('decimal', {
+    transformer: {
+      to: (v: number) => v,
+      from: (v: string) => Number(v),
+    },
+  })
   price_min: number;
 
-  @Column('decimal')
+  @Column('decimal', {
+    transformer: {
+      to: (v: number) => v,
+      from: (v: string) => Number(v),
+    },
+  })
   price_max: number;
 
   @Column()

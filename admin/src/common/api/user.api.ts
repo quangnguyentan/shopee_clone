@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { baseApi } from "../config/baseApi";
 import type { User } from "../types/user.type";
 
