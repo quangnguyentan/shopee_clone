@@ -33,4 +33,14 @@ export class CategoryController extends BaseController<Category> {
   update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     return this.service.updateCategory(+id, dto);
   }
+
+  @Get('')
+  findAll() {
+    return this.service.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOneById(+id);
+  }
 }

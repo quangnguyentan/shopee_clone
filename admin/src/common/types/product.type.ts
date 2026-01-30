@@ -1,8 +1,14 @@
+import type { Category } from "./category.type";
 import type { ProductImage } from "./product-image.type";
 import type { ProductVariant } from "./product-variant.type";
 import type { Shop } from "./shop.type";
 
-export type ProductStatus = "active" | "inactive";
+export const ProductStatus = {
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+} as const;
+
+export type ProductStatus = (typeof ProductStatus)[keyof typeof ProductStatus];
 
 export interface Product {
   id: A;
@@ -10,6 +16,10 @@ export interface Product {
   shop_id: A;
 
   shop: Shop;
+
+  category_id: A;
+
+  category: Category;
 
   name: string;
 

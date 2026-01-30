@@ -33,9 +33,9 @@ export class ShopService extends BaseService<Shop> {
     });
   }
 
-  async createShop(userId: number, dto: CreateShopDto) {
+  async createShop(dto: CreateShopDto) {
     const existed = await this.repo.findOne({
-      where: { user: { id: userId } } as any,
+      where: { user: { id: dto.user_id } } as any,
     });
 
     if (existed) {
@@ -43,12 +43,16 @@ export class ShopService extends BaseService<Shop> {
     }
 
     return this.create({
-      ...dto,
-      user: { id: userId } as any,
+      name: dto.name,
+      description: dto.description,
+      logo: dto.logo,
+      rating: dto.rating ?? 0,
+      is_active: dto.is_active ?? true,
+      user: { id: dto.user_id } as any,
     });
   }
 
-  async updateShop(shopId: number, userId: number, dto: UpdateShopDto) {
+  async updateShop(shopId: number, user: any, dto: UpdateShopDto) {
     const shop = await this.repo.findOne({
       where: { id: shopId },
       relations: ['user'],
@@ -56,8 +60,11 @@ export class ShopService extends BaseService<Shop> {
 
     if (!shop) throw new NotFoundException('Shop not found');
 
-    if (shop.user.id !== userId) {
-      throw new ForbiddenException('Not shop owner');
+    const isAdmin = user.role === 'admin';
+    const isOwner = shop.user.id === user.userId;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException('No permission');
     }
 
     return this.updateById(shopId, dto);

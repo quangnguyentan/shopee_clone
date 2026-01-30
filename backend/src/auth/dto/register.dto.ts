@@ -1,5 +1,11 @@
 // dto/register.dto.ts
-import { IsEmail, IsEnum, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export enum Role {
   BUYER = 'buyer',
@@ -13,4 +19,8 @@ export class RegisterDto {
 
   @MinLength(6)
   password: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
 }

@@ -63,6 +63,24 @@ export const authApi = baseApi
       refresh: builder.mutation<any, void>({
         query: () => ({ url: `auth/${AUTH_SCOPE}/refresh`, method: "POST" }),
       }),
+      verifyEmailOtp: builder.mutation<any, { email: string; otp: string }>({
+        query: (body) => ({
+          url: "auth/verify-email-otp",
+          method: "POST",
+          data: body,
+        }),
+      }),
+
+      resendVerifyEmail: builder.mutation<
+        { cooldown?: number },
+        { email: string }
+      >({
+        query: (body) => ({
+          url: "auth/resend-verify-email",
+          method: "POST",
+          data: body,
+        }),
+      }),
     }),
   });
 export const {
@@ -73,4 +91,6 @@ export const {
   useLogoutMutation,
   useLogoutAllMutation,
   useRefreshMutation,
+  useVerifyEmailOtpMutation,
+  useResendVerifyEmailMutation,
 } = authApi;

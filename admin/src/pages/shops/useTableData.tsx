@@ -1,19 +1,10 @@
 import { useGetAllShopsQuery } from "@/common/api/shop.api";
 import type { Shop } from "@/common/types/shop.type";
 import { convertDay } from "@/common/utils/convertDay";
-import { EditOutlined } from "@ant-design/icons";
-import { Button, Space } from "antd";
+import type { ToolbarAction } from "@/common/utils/mixins";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-type ToolbarAction = {
-  key: string;
-  label: string;
-  onClick?: () => void;
-  url?: string;
-  danger?: boolean;
-};
 
 const useTableData = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -25,15 +16,16 @@ const useTableData = () => {
 
   const hasSelection = selectedRowKeys.length > 0;
 
-  const handleEdit = useCallback(
-    (record: Shop) => {
-      navigate(`/shops/${record.id}/edit`);
-    },
-    [navigate],
-  );
+  const canEdit = selectedRowKeys.length === 1;
+  const handleEdit = useCallback(() => {
+    if (selectedRowKeys.length !== 1) return;
+
+    const productId = selectedRowKeys[0];
+    navigate(`/shops/${productId}/edit`);
+  }, [selectedRowKeys, navigate]);
 
   const handleBulkDelete = useCallback(() => {
-    console.log("Delete products:", selectedRowKeys);
+    console.log("Delete shops:", selectedRowKeys);
   }, [selectedRowKeys]);
 
   const columns = useMemo(
@@ -83,23 +75,8 @@ const useTableData = () => {
         searchable: true,
         render: (value: string) => convertDay(value),
       },
-      {
-        title: "Actions",
-        key: "actions",
-        fixed: "right",
-        width: 120,
-        render: (_: unknown, record: Shop) => (
-          <Space>
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
-          </Space>
-        ),
-      },
     ],
-    [handleEdit],
+    [],
   );
 
   const rowSelection: TableRowSelection<Shop> = {
@@ -118,9 +95,16 @@ const useTableData = () => {
         key: "create",
         label: "Create",
         onClick: () => navigate("/shops/create"),
+        type: "primary",
       },
     ];
-
+    if (canEdit) {
+      actions.push({
+        key: "edit",
+        label: "Edit",
+        onClick: handleEdit,
+      });
+    }
     if (hasSelection) {
       actions.push({
         key: "bulk-delete",
@@ -131,7 +115,14 @@ const useTableData = () => {
     }
 
     return actions;
-  }, [hasSelection, selectedRowKeys.length, handleBulkDelete, navigate]);
+  }, [
+    hasSelection,
+    selectedRowKeys.length,
+    handleBulkDelete,
+    navigate,
+    canEdit,
+    handleEdit,
+  ]);
 
   return {
     columns,

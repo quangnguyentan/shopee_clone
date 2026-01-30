@@ -1,4 +1,6 @@
 import {
+  BranchesOutlined,
+  BuildOutlined,
   DashboardOutlined,
   FileImageOutlined,
   InboxOutlined,
@@ -22,10 +24,16 @@ export const NAV_ITEMS = [
     url: "/users",
   },
   {
-    key: "/products",
-    icon: <ProductOutlined />,
-    label: "Products",
-    url: "/products",
+    key: "/categories",
+    icon: <BranchesOutlined />,
+    label: "Categories",
+    url: "/categories",
+  },
+  {
+    key: "/categoryAttributes",
+    icon: <BuildOutlined />,
+    label: "Category Attributes",
+    url: "/categoryAttributes",
   },
   {
     key: "/shops",
@@ -33,6 +41,13 @@ export const NAV_ITEMS = [
     label: "Shops",
     url: "/shops",
   },
+  {
+    key: "/products",
+    icon: <ProductOutlined />,
+    label: "Products",
+    url: "/products",
+  },
+
   {
     key: "/product-images",
     icon: <FileImageOutlined />,

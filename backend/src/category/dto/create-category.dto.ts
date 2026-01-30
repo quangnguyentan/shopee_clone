@@ -5,14 +5,10 @@ export class CreateCategoryDto {
   name: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
   imageUrl?: string;
 
   @IsOptional()
   @IsNumber()
   parent_id?: number;
-
-  @IsOptional()
-  @IsNumber()
-  orderIndex?: number;
 }

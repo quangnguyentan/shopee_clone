@@ -2,10 +2,9 @@ import { IsEnum, IsNumber, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum ProductStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
+  active = 'active',
+  inactive = 'inactive',
 }
-
 export class CreateProductDto {
   @Type(() => Number)
   @IsNumber()

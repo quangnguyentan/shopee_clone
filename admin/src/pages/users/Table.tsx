@@ -1,39 +1,57 @@
 import GenericTable from "../../components/Table";
-
-interface User {
-  id: string;
-  name: string;
-  age: number;
-  address: string;
-}
-
-const users: User[] = [
-  { id: "1", name: "John Brown", age: 32, address: "New York" },
-  { id: "2", name: "Joe Black", age: 42, address: "London" },
-];
+import useTableData from "./useTableData";
+import { Button, Spin } from "antd";
+import TableSkeleton from "@/components/TableSkeleton";
+import { useEffect } from "react";
+import NProgress from "@/common/utils/nprogress";
+import type { User } from "@/common/types/user.type";
 
 export const Table = () => {
+  const {
+    columns,
+    users,
+    isLoading,
+    isFetching,
+    toolbarActions,
+    rowSelection,
+  } = useTableData();
+  const showLoading = isLoading || isFetching;
+  useEffect(() => {
+    if (showLoading) {
+      NProgress.start();
+    } else {
+      NProgress.done();
+    }
+  }, [showLoading]);
+
+  if (isLoading) {
+    return <TableSkeleton />;
+  }
+
   return (
-    <GenericTable<User>
-      rowKey="id"
-      data={users}
-      columns={[
-        {
-          title: "Name",
-          dataIndex: "name",
-          searchable: true,
-        },
-        {
-          title: "Age",
-          dataIndex: "age",
-          searchable: true,
-        },
-        {
-          title: "Address",
-          dataIndex: "address",
-          searchable: true,
-        },
-      ]}
-    />
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-start h-8">
+        {toolbarActions.map((a) => (
+          <Button
+            key={a.key}
+            type={a.type}
+            danger={a.danger}
+            onClick={a.onClick}
+            className="rounded-full! mx-1 w-20 h-full"
+          >
+            {a.label}
+          </Button>
+        ))}
+      </div>
+
+      <Spin spinning={isFetching}>
+        <GenericTable<User>
+          rowKey="id"
+          data={users}
+          columns={columns as A}
+          rowSelection={rowSelection}
+        />
+      </Spin>
+    </div>
   );
 };

@@ -3,6 +3,7 @@
   "pages.auth.header.register.title": "Đăng ký",
   "pages.auth.header.you-need-to-help.title": "Bạn cần giúp đỡ?",
   "pages.auth.login.title": "Đăng nhập",
+  "pages.auth.header.verify.title": "Xác thực",
   "pages.auth.login.with.qrcode.title": "Đăng nhập với mã QR",
   "pages.auth.login.with.password.title": "Đăng nhập với mật khẩu",
   "pages.auth.login.username.placeholder": "Email/Số điện thoại/Tên đăng nhập",
@@ -44,5 +45,15 @@
   "pages.home.topbar.english": "English",
   "pages.home.topbar.profile.my-account": "Tài khoản của tôi",
   "pages.home.topbar.profile.my-order": "Đơn hàng",
-  "pages.home.topbar.profile.logout": "Đăng xuất"
+  "pages.home.topbar.profile.logout": "Đăng xuất",
+  "pages.auth.error.invalid_email": "Địa chỉ email không đúng",
+  "pages.auth.error.invalid_phone": "Số điện thoại không đúng",
+  "pages.auth.error.password_min_6": "Mật khẩu ít nhất 6 ký tự",
+  "pages.auth.verify.required": "Tài khoản {email} của bạn chưa được xác minh. Vui lòng xác minh email để tiếp tục đăng nhập.",
+  "pages.auth.verify.title": "Xác minh email",
+  "pages.auth.verify.button.verify": "Xác minh ngay",
+  "pages.auth.verify.button.resend": "Gửi lại email xác minh",
+  "pages.auth.verify.resend.cooldown": "Gửi lại sau {seconds}s",
+  "pages.auth.verify.resend.success": "Đã gửi email xác minh",
+  "pages.auth.verify.resend.wait": "Vui lòng chờ {seconds}s"
 }

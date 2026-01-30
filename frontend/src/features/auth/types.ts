@@ -11,7 +11,16 @@ export const loginSchema = z.object({
 });
 export const registerSchema = z.object({
   phone: z.string().min(10, {
-    message: i18n.get("pages.auth.error.required"),
+    message: i18n.get("pages.auth.error.invalid_phone"),
+  }),
+
+  email: z
+    .string()
+    .min(1, { message: i18n.get("pages.auth.error.required") })
+    .email({ message: i18n.get("pages.auth.error.invalid_email") }),
+
+  password: z.string().min(6, {
+    message: i18n.get("pages.auth.error.password_min_6"),
   }),
 });
 

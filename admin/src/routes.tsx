@@ -12,6 +12,12 @@ import { ProductFormPage } from "./pages/products/components";
 const Login = lazy(() => import("@/pages/login"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const User = lazy(() => import("@/pages/users"));
+const Category = lazy(() => import("@/pages/category"));
+const CategoryAttribute = lazy(() => import("@/pages/category-attribute"));
+const CategoryAttributeValue = lazy(
+  () => import("@/pages/category-attribute-value"),
+);
+
 const Products = lazy(() => import("@/pages/products"));
 const Shops = lazy(() => import("@/pages/shops"));
 const ProductVariants = lazy(() => import("@/pages/product-variants"));
@@ -22,9 +28,18 @@ const ShopFormPage = lazy(() =>
     default: mod.ShopFormPage,
   })),
 );
+const ProductVariantAttribute = lazy(
+  () => import("@/pages/product-variant-attribute"),
+);
+
 import { VariantOptionFormPage } from "./pages/variant-options/components";
 import { ProductImageFormPage } from "./pages/product-images/components";
 import { ProductVariantFormPage } from "./pages/product-variants/components";
+import { UserFormPage } from "./pages/users/components";
+import { CategoryFormPage } from "./pages/category/components";
+import { CategoryAttributeFormPage } from "./pages/category-attribute/components";
+import { CategoryAttributeValueFormPage } from "./pages/category-attribute-value/components";
+import { ProductVariantAttributeFormPage } from "./pages/product-variant-attribute/components";
 
 const S = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<Loading />}>{children}</Suspense>
@@ -75,6 +90,94 @@ export const router = createBrowserRouter([
             element: (
               <S>
                 <User />
+              </S>
+            ),
+          },
+          {
+            path: "users/create",
+            element: (
+              <S>
+                <UserFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "users/:id/edit",
+            element: (
+              <S>
+                <UserFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "categories",
+            element: (
+              <S>
+                <Category />
+              </S>
+            ),
+          },
+          {
+            path: "categories/create",
+            element: (
+              <S>
+                <CategoryFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "categories/:id/edit",
+            element: (
+              <S>
+                <CategoryFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "categoryAttributes",
+            element: (
+              <S>
+                <CategoryAttribute />
+              </S>
+            ),
+          },
+          {
+            path: "categoryAttributes/create",
+            element: (
+              <S>
+                <CategoryAttributeFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "categoryAttributes/:id/edit",
+            element: (
+              <S>
+                <CategoryAttributeFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "category-attributes/:attributeId/values",
+            element: (
+              <S>
+                <CategoryAttributeValue />
+              </S>
+            ),
+          },
+          {
+            path: "category-attributes/:attributeId/values/create",
+            element: (
+              <S>
+                <CategoryAttributeValueFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "category-attributes/:attributeId/values/:id/edit",
+            element: (
+              <S>
+                <CategoryAttributeValueFormPage />
               </S>
             ),
           },
@@ -147,6 +250,30 @@ export const router = createBrowserRouter([
             element: (
               <S>
                 <VariantOptionFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "productVariantAttributes",
+            element: (
+              <S>
+                <ProductVariantAttribute />
+              </S>
+            ),
+          },
+          {
+            path: "product-variants/:variantId/attributes/create",
+            element: (
+              <S>
+                <ProductVariantAttributeFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "product-variants/:variantId/attributes/:id/edit",
+            element: (
+              <S>
+                <ProductVariantAttributeFormPage />
               </S>
             ),
           },

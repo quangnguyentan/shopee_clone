@@ -40,28 +40,22 @@ const useTableData = () => {
     console.log("Delete products:", selectedRowKeys);
   }, [selectedRowKeys]);
 
+  const handleAddAttribute = useCallback(
+    (record: ProductVariant) => {
+      navigate(`/product-variants/${record.id}/attributes/create`);
+    },
+    [navigate],
+  );
   const columns = useMemo(
     () => [
       {
+        width: 250,
         title: "Product Name",
         dataIndex: "name",
         searchable: true,
         render: (_: unknown, record: ProductVariant) => record.product.name,
       },
-      {
-        width: 200,
-        title: "Options",
-        searchable: true,
-        render: (_: unknown, record: ProductVariant) => (
-          <div className="flex flex-col gap-2">
-            {record.options.map((option) => (
-              <span>
-                {option.option_name}: {option.option_value}
-              </span>
-            ))}
-          </div>
-        ),
-      },
+
       {
         title: "SKU",
         dataIndex: "sku",
@@ -99,11 +93,14 @@ const useTableData = () => {
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
             />
+            <Button type="link" onClick={() => handleAddAttribute(record)}>
+              Attributes
+            </Button>
           </Space>
         ),
       },
     ],
-    [handleEdit],
+    [handleEdit, handleAddAttribute],
   );
 
   const rowSelection: TableRowSelection<ProductVariant> = {

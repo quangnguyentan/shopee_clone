@@ -1,6 +1,6 @@
 import { BaseEntity } from '@/base/base.entity';
+import { ProductVariantAttribute } from '@/product-variant-attributes/entities/product-variant-attribute.entity';
 import { Product } from 'src/product/entities/product.entity';
-import { VariantOption } from 'src/variant-option/entities/variant-option.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -25,6 +25,9 @@ export class ProductVariant extends BaseEntity {
   @Column()
   stock: number;
 
-  @OneToMany(() => VariantOption, (o) => o.variant)
-  options: VariantOption[];
+  @OneToMany(() => ProductVariantAttribute, (attr) => attr.variant, {
+    cascade: true,
+    eager: true,
+  })
+  attributes: ProductVariantAttribute[];
 }
