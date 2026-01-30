@@ -1,10 +1,20 @@
-FROM nginx:alpine
+FROM node:20-alpine AS builder
+WORKDIR /app
 
-RUN rm /etc/nginx/conf.d/default.conf
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM node:20-alpine
+WORKDIR /app
 
-COPY public /usr/share/nginx/html
+ENV NODE_ENV=production
+ENV PORT=8080
 
-EXPOSE 8081
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY package*.json ./
+
+EXPOSE 8080
+CMD ["node", "dist/main.js"]
