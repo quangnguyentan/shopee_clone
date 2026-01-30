@@ -25,7 +25,7 @@ const loadIntl = (lang: Language) => {
       defaultLocale: "vi",
       messages: messages[lang] || messages["vi"],
     },
-    cache
+    cache,
   );
 };
 

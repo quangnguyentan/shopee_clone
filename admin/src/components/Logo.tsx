@@ -45,7 +45,7 @@ const Logo = ({ collapsed }: { collapsed: boolean }) => {
                 height={14}
                 preview={false}
               />
-              <span className="text-[10px] font-light text-red-500">
+              <span className="text-[12px] font-light text-red-500">
                 Shopee admin
               </span>
             </div>

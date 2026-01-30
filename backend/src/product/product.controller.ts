@@ -4,8 +4,10 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
+  Put,
 } from '@nestjs/common';
 import { BaseController } from '@/base/base.controller';
 import { Product } from './entities/product.entity';
@@ -15,6 +17,7 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { AuthRole } from '@/common/decorators/auth-role.decorator';
+import { CreateProductWithVariantDto } from './dto/create-product-full.dto';
 
 @Controller('products')
 export class ProductController extends BaseController<Product> {
@@ -47,8 +50,18 @@ export class ProductController extends BaseController<Product> {
     return this.service.deleteProduct(+id, user.userId);
   }
 
+  @Get('buyer')
+  findAllView() {
+    return this.service.findAllView();
+  }
+
+  @Get('buyer/:id')
+  findOneView(@Param('id') id: string) {
+    return this.service.findOneView(+id);
+  }
+
   @AuthRole('admin')
-  @Get()
+  @Get('')
   findAll() {
     return this.service.findAll();
   }
@@ -57,5 +70,21 @@ export class ProductController extends BaseController<Product> {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOneById(+id);
+  }
+
+  @Auth()
+  @Post('seller/full')
+  createFull(@CurrentUser() user, @Body() dto: CreateProductWithVariantDto) {
+    return this.service.createFullProduct(user.userId, dto);
+  }
+
+  @Auth()
+  @Put('seller/:id/full')
+  updateFull(
+    @CurrentUser() user,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateProductWithVariantDto,
+  ) {
+    return this.service.updateFullProduct(id, user.userId, dto);
   }
 }

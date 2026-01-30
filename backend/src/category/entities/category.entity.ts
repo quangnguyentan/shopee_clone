@@ -1,4 +1,5 @@
 import { BaseEntity } from '@/base/base.entity';
+import { CategoryAttribute } from '@/category-attributes/entities/category-attribute.entity';
 import {
   Column,
   Entity,
@@ -10,7 +11,10 @@ import {
 
 @Entity('categories')
 export class Category extends BaseEntity {
-  @ManyToOne(() => Category, (c) => c.children, { nullable: true })
+  @ManyToOne(() => Category, (c) => c.children, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'parent_id' })
   parent: Category;
 
@@ -23,6 +27,6 @@ export class Category extends BaseEntity {
   @Column({ name: 'image_url', type: 'varchar', length: 500, nullable: true })
   imageUrl: string;
 
-  @Column({ name: 'order_index', type: 'int', default: 0 })
-  orderIndex: number;
+  @OneToMany(() => CategoryAttribute, (a) => a.category)
+  attributes: CategoryAttribute[];
 }

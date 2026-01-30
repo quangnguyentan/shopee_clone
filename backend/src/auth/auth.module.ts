@@ -11,6 +11,8 @@ import { PassportModule } from '@nestjs/passport';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { SessionModule } from '@/session/session.module';
 import { Session } from '@/session/entities/session.entity';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { FacebookStrategy } from './strategies/facebook.strategy';
 
 @Module({
   imports: [
@@ -29,7 +31,7 @@ import { Session } from '@/session/entities/session.entity';
     SessionModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, FacebookStrategy],
   exports: [PassportModule],
 })
 export class AuthModule {}

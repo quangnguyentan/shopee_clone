@@ -61,7 +61,7 @@ const Navbar: React.FC = () => {
         collapsed={collapsed}
         theme="light"
         className="rounded-t-4xl"
-        width={240}
+        width={300}
       >
         <div className="flex flex-col gap-4 py-4">
           <Logo collapsed={collapsed} />

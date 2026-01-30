@@ -8,7 +8,11 @@ export const AUTH_EXCLUDE_PATHS = [
   "/auth/logout-all",
 ];
 
-export const AUTH_ROUTES = ["/buyer/login", "/buyer/signup"];
+export const AUTH_ROUTES = [
+  "/buyer/login",
+  "/buyer/signup",
+  "/buyer/verify-email",
+];
 export const PROTECTED_ROUTES = ["/profile", "/orders", "/cart"];
 
 export type LanguageKeys = "vi" | "en";

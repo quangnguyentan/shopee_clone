@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
 import { Button } from "@/src/components/ui/button";
 import {
   Card,
@@ -8,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/src/components/ui/card";
-
 import { Form } from "@/src/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -19,36 +19,47 @@ import { FormInput } from "@/src/components/shared/FormInput";
 import { IconButton } from "@/src/components/shared/IconButton";
 import { FaFacebook, FcGoogle } from "@/src/components/shared/Icon";
 import { useNavigate } from "@/src/common/constants/navigate.constant";
-import ReCAPTCHA from "react-google-recaptcha";
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { DialogBox } from "@/src/components/shared/Dialog";
-import { Separator } from "@/src/components/ui/separator";
-
-import { useResendCountDown } from "../hooks/useResendCountdown";
+import { toast } from "sonner";
 import { Loading } from "@/src/components/shared/Loading";
+import { useRegisterMutation } from "@/src/common/api/auth.api";
+
 const RegisterCard = () => {
   const { push } = useNavigate();
-  const [isOpenDialog, setIsOpenDialog] = useState(false);
-  const [resendCountDown, setResendCountDown] = useState(0);
 
+  const [isOpenDialog, setIsOpenDialog] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const [register] = useRegisterMutation();
+
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
+    mode: "onChange",
     defaultValues: {
       phone: "",
+      email: "",
+      password: "",
     },
   });
-  const { setError } = form;
+
   const isFormValid = form.formState.isValid;
-  useResendCountDown({
-    resendCountDown,
-    setResendCountDown,
-  });
-  // 2. Define a submit handler.
-  function onSubmit(values: z.infer<typeof registerSchema>) {
-    console.log(isOpenDialog, "isOpenDialog");
+
+  const onSubmit = (values: z.infer<typeof registerSchema>) => {
     if (!isOpenDialog) return;
-  }
+
+    startTransition(async () => {
+      try {
+        await register(values).unwrap();
+
+        toast.success("OTP has been sent to your email");
+
+        push(`/buyer/verify-email?email=${values.email}`);
+      } catch (err: any) {
+        toast.error(err?.data?.message || "Register failed");
+      }
+    });
+  };
 
   const handleContinue = async () => {
     const valid = await form.trigger();
@@ -58,11 +69,12 @@ const RegisterCard = () => {
 
   return (
     <Card className="w-full max-w-[25rem] absolute top-1/2 right-0 -translate-y-1/2 shadow-lg bg-white rounded-sm">
-      <CardHeader className="flex items-center justify-start">
+      <CardHeader>
         <CardTitle className="text-xl font-medium">
           {i18n.get("pages.auth.register.title")}
         </CardTitle>
       </CardHeader>
+
       <CardContent>
         <Form {...form}>
           <form
@@ -70,84 +82,95 @@ const RegisterCard = () => {
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-col gap-3"
           >
+            {/* Phone */}
             <FormInput
-              name="phone"
-              placeholder={i18n.get("pages.auth.register.phone.placeholder")}
               className="px-2 rounded-sm"
-              formItemClassName="flex flex-col gap-1 h-[3.5rem]"
+              name="phone"
               type="tel"
+              placeholder={i18n.get("pages.auth.register.phone.placeholder")}
             />
+
+            <FormInput
+              className="px-2 rounded-sm"
+              name="email"
+              type="email"
+              placeholder="Email"
+            />
+
+            <FormInput
+              className="px-2 rounded-sm"
+              name="password"
+              type="password"
+              placeholder="Password"
+            />
+
             <CardFooter className="flex-col gap-4 !p-0">
               <Button
-                onClick={handleContinue}
                 type="button"
-                className={`w-full bg-red-primary !py-0.5 !rounded-sm text-white uppercase !px-0 ${
-                  !isFormValid ? "cursor-not-allowed opacity-70" : ""
-                }`}
+                onClick={handleContinue}
+                disabled={!isFormValid}
+                className="w-full bg-red-primary text-white uppercase rounded-sm"
               >
                 {i18n.get("pages.auth.register.button-continue")}
               </Button>
 
-              {isOpenDialog && (
-                <DialogBox
-                  open={isOpenDialog}
-                  onOpenChange={setIsOpenDialog}
-                  className="bg-white !rounded-sm !shadow-none"
-                  footer={
-                    <div className="flex items-center justify-center gap-4 py-4">
-                      <Button className="bg-white border !rounded-none text-base text-grow-primary">
-                        Hủy bỏ
-                      </Button>
-                      <Button
-                        disabled={
-                          !isFormValid || isPending || resendCountDown > 0
-                        }
-                        type="submit"
-                        form="register-form"
-                        className="bg-white border !rounded-none text-base text-grow-primary"
-                      >
-                        Gửi otp
-                      </Button>
-                    </div>
-                  }
-                >
-                  <span className="flex items-center justify-center gap-1 font-medium text-grow-primary px-8">
-                    Chúng tôi sẽ gửi mã xác minh qua Zalo đến{" "}
-                    {form.getValues("phone")}
-                  </span>
-                </DialogBox>
-              )}
-              <div id="recaptcha-container" />
-              {isPending && <Loading />}
-              <span className="text-start w-full text-xs text-blue-primary cursor-pointer">
-                {i18n.get("pages.auth.login.forgot-password.title")}
-              </span>
-              <div className="flex items-center w-full gap-4 justify-center">
-                <div className="flex-1 bg-gray-primary w-full h-[1px]"></div>
-                <span className="text-[12px] text-gray-500/40 uppercase font-medium">
-                  {i18n.get("pages.auth.login.or.title")}
+              {/* Confirm dialog */}
+              <DialogBox
+                open={isOpenDialog}
+                onOpenChange={setIsOpenDialog}
+                className="bg-white rounded-sm"
+                footer={
+                  <div className="flex justify-center gap-4 py-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isPending}
+                      onClick={() => setIsOpenDialog(false)}
+                    >
+                      Hủy bỏ
+                    </Button>
+                    <Button
+                      type="submit"
+                      form="register-form"
+                      disabled={isPending}
+                    >
+                      {isPending ? "Đang gửi..." : "Gửi OTP"}
+                    </Button>
+                  </div>
+                }
+              >
+                <span className="text-center text-sm font-medium text-grow-primary px-6">
+                  Chúng tôi sẽ gửi mã xác minh đến{" "}
+                  <b>{form.getValues("email")}</b>
                 </span>
-                <div className="flex-1 bg-gray-primary w-full h-[1px]"></div>
+              </DialogBox>
+
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400 uppercase">OR</span>
+                <div className="flex-1 h-px bg-gray-200" />
               </div>
-              <div className="flex items-center justify-center gap-2 w-full">
+
+              <div className="flex gap-2">
                 <IconButton
-                  type="button"
                   variant="outline"
-                  className="w-full rounded-sm font-normal"
-                  startIcon={<FaFacebook color="#1877F2" size={22} />}
+                  className="w-full"
+                  startIcon={<FaFacebook size={22} color="#1877F2" />}
                 >
                   {i18n.get("pages.auth.with.facebook.title")}
                 </IconButton>
+
                 <IconButton
-                  type="button"
-                  className="w-full rounded-sm font-normal"
                   variant="outline"
+                  className="w-full"
                   startIcon={<FcGoogle size={22} />}
                 >
                   {i18n.get("pages.auth.with.google.title")}
                 </IconButton>
               </div>
-              <div className="flex items-center justify-center gap-1 text-sm">
+
+              {/* Login */}
+              <div className="flex justify-center gap-1 text-sm">
                 <span className="text-gray-secondary">
                   {i18n.get("pages.auth.description.login.title")}
                 </span>

@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsNumber, ValidateNested } from 'class-validator';
-import { CreateVariantOptionDto } from '@/variant-option/dto/create-variant-option.dto';
 
 export class CreateProductVariantDto {
   @Type(() => Number)
@@ -14,9 +13,4 @@ export class CreateProductVariantDto {
   @Type(() => Number)
   @IsNumber()
   stock: number;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateVariantOptionDto)
-  options: CreateVariantOptionDto[];
 }

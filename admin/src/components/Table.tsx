@@ -10,7 +10,7 @@ import Highlighter from "react-highlight-words";
 
 type KeyOf<T> = Extract<keyof T, string>;
 
-interface GenericTableColumn<T> {
+export interface GenericTableColumn<T> {
   title: string;
   dataIndex: KeyOf<T>;
   searchable?: boolean;

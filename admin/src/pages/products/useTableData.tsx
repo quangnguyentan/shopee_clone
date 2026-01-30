@@ -43,6 +43,7 @@ const useTableData = () => {
         title: "Product Name",
         dataIndex: "name",
         searchable: true,
+        width: 350,
       },
       {
         width: 200,
@@ -70,33 +71,6 @@ const useTableData = () => {
               />
             ) : null,
           ),
-      },
-      {
-        width: 200,
-        title: "Options",
-        searchable: true,
-        render: (_: unknown, record: Product) => (
-          <div className="flex flex-col gap-2">
-            {record.variants.map((variant) => (
-              <div
-                key={variant.id}
-                className="px-2 py-1 bg-gray-100 rounded-md"
-              >
-                {variant.options
-                  .map((opt) => `${opt.option_name}: ${opt.option_value}`)
-                  .join(" / ")}
-              </div>
-            ))}
-          </div>
-        ),
-      },
-      {
-        width: 300,
-        title: "Description",
-        dataIndex: "description",
-        render: (value: string) => (
-          <span className="line-clamp-1">{value}</span>
-        ),
       },
       {
         width: 200,

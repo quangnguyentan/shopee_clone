@@ -1,4 +1,5 @@
 import { BaseEntity } from '@/base/base.entity';
+import { Category } from '@/category/entities/category.entity';
 import { ProductImage } from '@/product-image/entities/product-image.entity';
 import { ProductVariant } from 'src/product-variant/entities/product-variant.entity';
 import { Shop } from 'src/shop/entities/shop.entity';
@@ -54,4 +55,11 @@ export class Product extends BaseEntity {
 
   @OneToMany(() => ProductImage, (img) => img.product)
   images: ProductImage[];
+
+  @Column({ name: 'category_id', type: 'bigint', nullable: true })
+  category_id: number;
+
+  @ManyToOne(() => Category, { nullable: true })
+  @JoinColumn({ name: 'category_id' })
+  category: Category;
 }

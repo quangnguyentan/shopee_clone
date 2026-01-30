@@ -32,12 +32,6 @@ export class ProductVariantController extends BaseController<ProductVariant> {
     return this.service.findOneById(+id);
   }
 
-  @Auth()
-  @Post()
-  createProductVariant(@Body() dto: CreateProductVariantDto) {
-    return this.service.createVariant(dto);
-  }
-
   @Get('product/:productId')
   findByProduct(@Param('productId') productId: string) {
     return this.service.findByProduct(+productId);

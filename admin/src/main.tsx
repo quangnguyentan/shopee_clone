@@ -23,5 +23,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </AuthBootstrap>
       </PersistGate>
     </Provider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

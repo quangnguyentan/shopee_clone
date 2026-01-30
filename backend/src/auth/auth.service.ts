@@ -21,8 +21,11 @@ import { RegisterDto } from './dto/register.dto';
 import { generateFromEmail } from 'unique-username-generator';
 import { AVATAR_DEFAULT } from '@/common/constant/asset.constant';
 import { Cron } from '@nestjs/schedule';
+import * as nodemailer from 'nodemailer';
+import { generateOTP } from '@/common/utils/generateOTP';
 
 const QR_EXPIRE_MS = 60 * 1000;
+const RESEND_COOLDOWN_MS = 60 * 1000;
 const qrSessions = new Map<
   string,
   { status: 'PENDING' | 'VERIFIED'; userId: string | null; createdAt: number }
@@ -73,23 +76,178 @@ export class AuthService {
       : { status: 'PENDING' };
   }
 
+  private async sendVerifyOtpEmail(email: string, otp: string) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_APP_PASSWORD,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"Shopee Clone" <${process.env.MAIL_USER}>`,
+      to: email,
+      subject: 'Verify your email',
+      html: `
+      <h3>Your verification code</h3>
+      <h1 style="letter-spacing:4px">${otp}</h1>
+      <p>This code will expire in 10 minutes</p>
+    `,
+    });
+  }
+
+  async resendVerifyEmail(email: string) {
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+
+    const now = Date.now();
+    if (
+      user.last_verify_email_sent_at &&
+      now - user.last_verify_email_sent_at.getTime() < RESEND_COOLDOWN_MS
+    ) {
+      return {
+        cooldown: Math.ceil(
+          (RESEND_COOLDOWN_MS -
+            (now - user.last_verify_email_sent_at.getTime())) /
+            1000,
+        ),
+      };
+    }
+
+    const otp = generateOTP();
+    user.email_verify_otp = await bcrypt.hash(otp, 10);
+    user.email_verify_otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
+    user.last_verify_email_sent_at = new Date();
+
+    await this.userRepo.save(user);
+    await this.sendVerifyOtpEmail(email, otp);
+
+    return { success: true, cooldown: 60 };
+  }
+
+  async verifyEmailOtp(email: string, otp: string) {
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+
+    if (user.email_verified)
+      throw new AppException(AUTH_ERROR.EMAIL_ALREADY_VERIFIED);
+
+    if (
+      !user.email_verify_otp ||
+      !user.email_verify_otp_expires_at ||
+      user.email_verify_otp_expires_at < new Date()
+    ) {
+      throw new AppException(AUTH_ERROR.OTP_EXPIRED);
+    }
+
+    const isValid = await bcrypt.compare(otp, user.email_verify_otp);
+    if (!isValid) throw new AppException(AUTH_ERROR.INVALID_OTP);
+
+    user.email_verified = true;
+    user.email_verify_otp = null;
+    user.email_verify_otp_expires_at = null;
+
+    await this.userRepo.save(user);
+
+    return { message: 'Email verified successfully' };
+  }
+
   async register(dto: RegisterDto) {
     const exists = await this.userRepo.findOne({ where: { email: dto.email } });
     if (exists) throw new AppException(AUTH_ERROR.USER_ALREADY_EXISTS);
 
-    const hash = await bcrypt.hash(dto.password, 10);
+    const otp = generateOTP();
+    const otpHash = await bcrypt.hash(otp, 10);
+
     const user = this.userRepo.create({
       email: dto.email,
-      name: generateFromEmail(dto.email, {
-        randomDigits: 2,
-        stripLeadingDigits: true,
-      }),
-      password: hash,
-      two_factor_enabled: false,
+      phone: dto.phone,
+      password: await bcrypt.hash(dto.password, 10),
+      name: generateFromEmail(dto.email),
       avatar: AVATAR_DEFAULT,
+      auth_provider: 'local',
+      email_verified: false,
+      email_verify_otp: otpHash,
+      email_verify_otp_expires_at: new Date(Date.now() + 10 * 60 * 1000),
+      last_verify_email_sent_at: new Date(),
     });
+
     await this.userRepo.save(user);
-    return { message: 'Register success', userId: user.id };
+    await this.sendVerifyOtpEmail(dto.email, otp);
+
+    return {
+      message: 'OTP sent to email',
+      email: dto.email,
+    };
+  }
+
+  async socialLogin(
+    profile: {
+      provider: 'google' | 'facebook';
+      providerId: string;
+      email: string;
+      name: string;
+      avatar: string;
+    },
+    userAgent: string,
+    ip: string,
+    res: Response,
+    scope: AuthScope,
+  ) {
+    if (scope === 'admin') {
+      throw new AppException(AUTH_ERROR.SOCIAL_LOGIN_NOT_ALLOWED);
+    }
+
+    let user = await this.userRepo.findOne({
+      where: {
+        auth_provider: profile.provider,
+        social_id: profile.providerId,
+      },
+    });
+
+    if (!user) {
+      const emailUser = await this.userRepo.findOne({
+        where: { email: profile.email },
+      });
+
+      if (emailUser) {
+        if (emailUser.auth_provider === 'local' && emailUser.email_verified) {
+          emailUser.auth_provider = profile.provider;
+          emailUser.social_id = profile.providerId;
+          user = await this.userRepo.save(emailUser);
+        } else {
+          throw new AppException(AUTH_ERROR.ACCOUNT_ALREADY_EXISTS);
+        }
+      }
+    }
+    if (!user) {
+      user = this.userRepo.create({
+        email: profile.email,
+        name: profile.name,
+        avatar: profile.avatar,
+        auth_provider: profile.provider,
+        social_id: profile.providerId,
+        email_verified: true,
+        role: scope,
+      });
+      await this.userRepo.save(user);
+    }
+
+    const session = await this.sessionsService.createSession({
+      userId: user.id,
+      ip,
+      deviceType: this.getDeviceType(userAgent),
+      userAgent,
+    });
+
+    return this.issueTokens(
+      this.refreshRepo.manager,
+      user,
+      session.id,
+      res,
+      scope,
+    );
   }
 
   async login(
@@ -102,7 +260,12 @@ export class AuthService {
   ) {
     const user = await this.userRepo.findOne({ where: { email: identifier } });
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
-
+    if (user.role !== scope) {
+      throw new AppException(AUTH_ERROR.UNAUTHORIZED);
+    }
+    if (user.auth_provider === 'local' && !user.email_verified) {
+      throw new AppException(AUTH_ERROR.EMAIL_NOT_VERIFIED, identifier);
+    }
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) throw new AppException(AUTH_ERROR.INVALID_PASSWORD);
 
@@ -134,6 +297,10 @@ export class AuthService {
     } catch {
       this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
+    }
+    if (payload.scope !== scope) {
+      this.clearAuthCookies(res, scope);
+      throw new AppException(AUTH_ERROR.SCOPE_MISMATCH);
     }
     const oldToken = await this.refreshRepo.findOne({
       where: {

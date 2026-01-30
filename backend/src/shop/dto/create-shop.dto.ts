@@ -1,6 +1,17 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsNumber,
+  IsInt,
+} from 'class-validator';
 
 export class CreateShopDto {
+  @IsInt()
+  @IsNotEmpty()
+  user_id: number;
+
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -12,4 +23,12 @@ export class CreateShopDto {
   @IsString()
   @IsOptional()
   logo?: string;
+
+  @IsNumber()
+  @IsOptional()
+  rating?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  is_active?: boolean;
 }

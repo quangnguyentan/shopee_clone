@@ -33,19 +33,25 @@ import { loginSuccess } from "@/src/common/storage/auth.slice";
 import { useAppDispatch } from "@/src/common/hooks/useAppSelector";
 import { setMe } from "@/src/common/storage/user.slice";
 import { socket } from "@/src/common/config/socket";
+import {
+  loginWithFacebook,
+  loginWithGoogle,
+} from "@/src/common/helper/loginRedirect";
+import { VerifyEmailRequiredCard } from "./VerifyEmailRequiredCard";
 
 const authErrorMap = {
   [AUTH_ERROR.USER_NOT_FOUND]: i18n.get(
-    "pages.auth.login.fail.wrong-username-doest-not-exists"
+    "pages.auth.login.fail.wrong-username-doest-not-exists",
   ),
   [AUTH_ERROR.INVALID_PASSWORD]: i18n.get(
-    "pages.auth.login.fail.wrong-username-password.title"
+    "pages.auth.login.fail.wrong-username-password.title",
   ),
 };
 
 const LoginCard = () => {
   const [login, { isLoading }] = useLoginMutation();
   const [isShowPassword, setIsShowPassword] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const dispatch = useAppDispatch();
   const { push, replace } = useNavigate();
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -83,13 +89,26 @@ const LoginCard = () => {
             replace("/");
             return i18n.get("pages.auth.login.success.title");
           },
-          error: (err) => getErrorMessage(err, authErrorMap),
-        }
+          error: (err) => {
+            console.log(err);
+            if (err?.data?.code === AUTH_ERROR.EMAIL_NOT_VERIFIED) {
+              setUnverifiedEmail(err.data.message);
+              return "Please verify your email before logging in";
+            }
+
+            return getErrorMessage(err, authErrorMap);
+          },
+        },
       );
     } catch (err) {
       console.log(err);
     }
   }
+  console.log(unverifiedEmail, "unverifiedEmail");
+  if (unverifiedEmail) {
+    return <VerifyEmailRequiredCard email={unverifiedEmail} />;
+  }
+
   return (
     <Card className="w-full max-w-[25rem] absolute top-1/2 right-0 -translate-y-1/2 shadow-lg bg-white rounded-sm">
       <CardHeader className="flex items-center justify-center">
@@ -175,6 +194,7 @@ const LoginCard = () => {
                   variant="outline"
                   className="w-full rounded-sm font-normal"
                   startIcon={<FaFacebook color="#1877F2" size={22} />}
+                  onClick={loginWithFacebook}
                 >
                   {i18n.get("pages.auth.with.facebook.title")}
                 </IconButton>
@@ -183,6 +203,7 @@ const LoginCard = () => {
                   className="w-full rounded-sm font-normal"
                   variant="outline"
                   startIcon={<FcGoogle size={22} />}
+                  onClick={loginWithGoogle}
                 >
                   {i18n.get("pages.auth.with.google.title")}
                 </IconButton>

@@ -1,78 +1,42 @@
-import { Button, Form, Input, Select, Space, message } from "antd";
+import { Button, Card, Form, Input, Select, Space } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect } from "react";
-import type { Product } from "@/common/types/product.type";
-import { useGetProductByIdQuery } from "@/common/api/product.api";
 import Loading from "@/components/Loading";
-import { getAssetUrl } from "@/common/utils/assets";
-import Uploader, { type UploadFileWithExtra } from "@/components/Uploader";
-import type { UploadFileStatus } from "antd/es/upload/interface";
-
-type ProductFormValues = Omit<Product, "images"> & {
-  images: UploadFileWithExtra[];
-};
+import { useGetProductVariantByIdQuery } from "@/common/api/product-variant.api";
+import { useGetAllProductQuery } from "@/common/api/product.api";
+import type { ProductVariant } from "@/common/types/product-variant.type";
+import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 
 const FormPage = () => {
   const { id } = useParams();
   const isEdit = !!id;
-  const [form] = Form.useForm<ProductFormValues>();
+  const [form] = Form.useForm<ProductVariant>();
   const navigate = useNavigate();
 
-  const { data: product, isLoading } = useGetProductByIdQuery(
-    { id },
-    { skip: !isEdit },
-  );
+  const { data: productVariant, isLoading: isProductVariantLoading } =
+    useGetProductVariantByIdQuery({ id }, { skip: !isEdit });
 
-  const mapImagesToUpload = (images?: Product["images"]) =>
-    images?.map((img) => ({
-      uid: String(img.id),
-      name: img.url.split("/").pop(),
-      status: "done" as UploadFileStatus,
-      url: getAssetUrl(img.url),
-      isPrimary: img.is_primary,
-    })) ?? [];
-
-  const extractAssetPath = (url?: string) => {
-    if (!url) return undefined;
-    const assetBase = import.meta.env.VITE_ASSET_URL;
-    return url.startsWith(assetBase) ? url.replace(assetBase, "") : url;
-  };
+  const { data: products, isLoading: isProductsLoading } =
+    useGetAllProductQuery();
 
   useEffect(() => {
-    if (isEdit && product) {
+    if (isEdit && productVariant) {
       form.setFieldsValue({
-        ...product,
-        images: mapImagesToUpload(product.images),
+        ...productVariant,
+        product_id: productVariant.product_id,
       });
     }
-  }, [isEdit, product]);
+  }, [isEdit, productVariant]);
 
-  const onFinish = (values: ProductFormValues) => {
-    const primary = values.images.find((f) => f.isPrimary);
-
-    if (!primary) {
-      message.error("Please select a primary image");
-      return;
-    }
-
-    const primary_image = primary.url
-      ? extractAssetPath(primary.url)
-      : primary.originFileObj;
-
-    const images = values.images
-      .filter((f) => !f.isPrimary)
-      .map((f) => (f.url ? { url: extractAssetPath(f.url) } : f.originFileObj));
-
+  const onFinish = (values: ProductVariant) => {
     const payload = {
       ...values,
-      primary_image,
-      images,
     };
 
     console.log("Payload:", payload);
   };
 
-  if (isLoading) return <Loading />;
+  if (isProductVariantLoading || isProductsLoading) return <Loading />;
 
   return (
     <Form
@@ -80,73 +44,116 @@ const FormPage = () => {
       layout="vertical"
       onFinish={onFinish}
       className="w-full h-full"
+      initialValues={{
+        options: [],
+      }}
     >
       <h2 className="text-xl font-semibold mb-4">
-        {isEdit ? "Edit Product" : "Create Product"}
+        {isEdit ? "Edit Product Variant" : "Create Product Variant"}
       </h2>
 
-      <Form.Item label="Name" name="name" rules={[{ required: true }]}>
-        <Input className="h-10" />
-      </Form.Item>
-
-      <Form.Item
-        label="Description"
-        name="description"
-        rules={[{ required: true }]}
-      >
-        <Input className="h-10" />
-      </Form.Item>
-
-      <Form.Item label="Stock" name="stock" rules={[{ required: true }]}>
-        <Input type="number" className="h-10" />
-      </Form.Item>
-
-      <Form.Item
-        label="Price min"
-        name="price_min"
-        rules={[{ required: true }]}
-      >
-        <Input type="number" className="h-10" />
-      </Form.Item>
-
-      <Form.Item
-        label="Price max"
-        name="price_max"
-        rules={[{ required: true }]}
-      >
-        <Input type="number" className="h-10" />
-      </Form.Item>
-
-      <Form.Item label="Status" name="status" rules={[{ required: true }]}>
+      <Form.Item label="Product" name="product_id" rules={[{ required: true }]}>
         <Select
-          options={[
-            { label: "Active", value: "active" },
-            { label: "Inactive", value: "inactive" },
-          ]}
+          loading={isProductsLoading}
+          options={products?.items?.map((p) => ({
+            label: p.name,
+            value: p.id,
+          }))}
+          size="large"
         />
       </Form.Item>
 
-      <Form.Item
-        label="Product Images"
-        name="images"
-        valuePropName="value"
-        rules={[
-          {
-            validator(_, value) {
-              if (!value || value.length === 0) {
-                return Promise.reject("Please upload product image");
-              }
-              if (!value.some((v: UploadFileWithExtra) => v.isPrimary)) {
-                return Promise.reject("Please select a primary image");
-              }
-              return Promise.resolve();
-            },
-          },
-        ]}
-      >
-        <Uploader />
-      </Form.Item>
+      <Form.List name="variants">
+        {(variantFields, { add, remove }) => (
+          <div className="space-y-4">
+            {variantFields.map(({ key, name }) => (
+              <Card
+                key={key}
+                title={`Variant #${name + 1}`}
+                extra={
+                  <Button danger onClick={() => remove(name)}>
+                    Remove
+                  </Button>
+                }
+              >
+                <Form.Item
+                  label="SKU"
+                  name={[name, "sku"]}
+                  rules={[{ required: true }]}
+                >
+                  <Input />
+                </Form.Item>
 
+                <Form.Item
+                  label="Price"
+                  name={[name, "price"]}
+                  rules={[{ required: true }]}
+                >
+                  <Input type="number" />
+                </Form.Item>
+
+                <Form.Item
+                  label="Stock"
+                  name={[name, "stock"]}
+                  rules={[{ required: true }]}
+                >
+                  <Input type="number" />
+                </Form.Item>
+
+                <Form.List name={[name, "attributes"]}>
+                  {(attrFields, { add: addAttr, remove: removeAttr }) => (
+                    <>
+                      <h4 className="font-medium">Attributes</h4>
+
+                      {attrFields.map(({ key, name: attrName }) => (
+                        <Space key={key} align="baseline">
+                          <Form.Item
+                            name={[attrName, "name"]}
+                            rules={[{ required: true }]}
+                          >
+                            <Select
+                              mode="tags"
+                              placeholder="Color / Size"
+                              style={{ width: 150 }}
+                            />
+                          </Form.Item>
+
+                          <Form.Item
+                            name={[attrName, "value"]}
+                            rules={[{ required: true }]}
+                          >
+                            <Select
+                              mode="tags"
+                              placeholder="Red / M / XL"
+                              style={{ width: 200 }}
+                            />
+                          </Form.Item>
+
+                          <MinusCircleOutlined
+                            onClick={() => removeAttr(attrName)}
+                          />
+                        </Space>
+                      ))}
+
+                      <Button
+                        type="dashed"
+                        onClick={() => addAttr()}
+                        icon={<PlusOutlined />}
+                      >
+                        Add attribute
+                      </Button>
+                    </>
+                  )}
+                </Form.List>
+              </Card>
+            ))}
+
+            <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
+              Add Variant
+            </Button>
+          </div>
+        )}
+      </Form.List>
       <Form.Item>
         <Space className="flex justify-end w-full pb-4 items-center">
           <Button onClick={() => navigate("/products")}>Cancel</Button>

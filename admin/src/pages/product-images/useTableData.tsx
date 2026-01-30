@@ -68,7 +68,7 @@ const useTableData = () => {
           value ? (
             <Tag color="gold">Primary</Tag>
           ) : (
-            <Tag color="default">—</Tag>
+            <Tag color="default">Not Primary</Tag>
           ),
       },
       {

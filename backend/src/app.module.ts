@@ -8,13 +8,11 @@ import { UserModule } from './user/user.module';
 import { ShopModule } from './shop/shop.module';
 import { ProductModule } from './product/product.module';
 import { ProductVariantModule } from './product-variant/product-variant.module';
-import { VariantOptionModule } from './variant-option/variant-option.module';
 import { OrderModule } from './order/order.module';
 import { OrderItemModule } from './order-item/order-item.module';
 import { CartModule } from './cart/cart.module';
 import { CartItemModule } from './cart-item/cart-item.module';
 import { CategoryModule } from './category/category.module';
-import { ProductCategoryModule } from './product-category/product-category.module';
 import { ProductImageModule } from './product-image/product-image.module';
 import { ProductReviewModule } from './product-review/product-review.module';
 import { PaymentModule } from './payment/payment.module';
@@ -23,7 +21,6 @@ import { VoucherModule } from './voucher/voucher.module';
 import { AddressModule } from './address/address.module';
 import { ChatMessageModule } from './chat-message/chat-message.module';
 import { SessionModule } from './session/session.module';
-import { AssetModule } from './assets/assets.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { FlashSaleModule } from './flash-sale/flash-sale.module';
@@ -31,6 +28,9 @@ import { FlashSaleItemModule } from './flash-sale-item/flash-sale-item.module';
 import { ShopFollowModule } from './shop-follow/shop-follow.module';
 import { ReportModule } from './report/report.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ProductVariantAttributeModule } from './product-variant-attributes/product-variant-attributes.module';
+import { CategoryAttributeModule } from './category-attributes/category-attributes.module';
+import { CategoryAttributeValueModule } from './category-attribute-values/category-attribute-values.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -70,13 +70,11 @@ import { ScheduleModule } from '@nestjs/schedule';
     ShopModule,
     ProductModule,
     ProductVariantModule,
-    VariantOptionModule,
     OrderModule,
     OrderItemModule,
     CartModule,
     CartItemModule,
     CategoryModule,
-    ProductCategoryModule,
     ProductImageModule,
     ProductReviewModule,
     PaymentModule,
@@ -85,11 +83,14 @@ import { ScheduleModule } from '@nestjs/schedule';
     AddressModule,
     ChatMessageModule,
     SessionModule,
-    AssetModule,
     FlashSaleModule,
     FlashSaleItemModule,
     ShopFollowModule,
     ReportModule,
+    ProductVariantModule,
+    CategoryAttributeModule,
+    CategoryAttributeValueModule,
+    ProductVariantAttributeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

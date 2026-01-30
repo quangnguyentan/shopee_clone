@@ -5,6 +5,7 @@ import { BaseService } from '@/base/base.service';
 import { Category } from './entities/category.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { PaginationDto } from '@/base/base.dto';
 
 @Injectable()
 export class CategoryService extends BaseService<Category> {
@@ -29,7 +30,6 @@ export class CategoryService extends BaseService<Category> {
     return this.create({
       name: dto.name,
       imageUrl: dto.imageUrl,
-      orderIndex: dto.orderIndex,
       parent,
     });
   }
@@ -46,7 +46,6 @@ export class CategoryService extends BaseService<Category> {
         name: dto.name,
         parent,
         imageUrl: dto.imageUrl,
-        orderIndex: dto.orderIndex,
       } as any);
     }
 
@@ -65,6 +64,18 @@ export class CategoryService extends BaseService<Category> {
     return this.repo.find({
       where: { parent: { id: parentId } } as any,
       relations: ['children'],
+    });
+  }
+
+  findAll(query?: PaginationDto) {
+    return super.findAll(query, {
+      relations: ['children', 'attributes', 'parent'],
+    });
+  }
+  async findOneById(id: number) {
+    return this.repo.findOne({
+      where: { id },
+      relations: ['children', 'attributes', 'parent'],
     });
   }
 }

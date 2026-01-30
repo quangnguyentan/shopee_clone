@@ -34,9 +34,10 @@ export class ShopController extends BaseController<Shop> {
   }
 
   @Auth()
+  @AuthRole('admin')
   @Post()
-  createShop(@CurrentUser() user, @Body() dto: CreateShopDto) {
-    return this.service.createShop(user.userId, dto);
+  createShop(@Body() dto: CreateShopDto) {
+    return this.service.createShop(dto);
   }
 
   @Auth()
@@ -46,7 +47,7 @@ export class ShopController extends BaseController<Shop> {
     @CurrentUser() user,
     @Body() dto: UpdateShopDto,
   ) {
-    return this.service.updateShop(+id, user.userId, dto);
+    return this.service.updateShop(+id, user, dto);
   }
 
   @Auth()

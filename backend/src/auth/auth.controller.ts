@@ -8,6 +8,7 @@ import {
   Req,
   UseGuards,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { type AuthScope, AuthService } from './auth.service';
 import { LoginDto } from './dto/create-auth.dto';
@@ -17,6 +18,8 @@ import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/auth.guard';
 import { Verify2FAActionDto } from './dto/verify-2fa-action.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { Auth } from '@/common/decorators/auth.decorator';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
@@ -27,20 +30,26 @@ export class AuthController {
     return this.authService.getQRCode();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('qr/verify')
-  verifyQRCode(
-    @Body()
-    body: {
-      sessionId: string;
-      userId: string;
-    },
-  ) {
-    return this.authService.verifyQRCode(body.sessionId, body.userId);
+  verifyQRCode(@Req() req, @Body() body: { sessionId: string }) {
+    return this.authService.verifyQRCode(body.sessionId, req.user.sub);
   }
 
   @Get('qr/status/:sessionId')
   checkQRStatus(@Param('sessionId') sessionId: string) {
     return this.authService.checkQRStatus(sessionId);
+  }
+
+  @Post('resend-verify-email')
+  resendVerifyEmail(@Body('email') email: string) {
+    if (!email) throw new BadRequestException('Email is required');
+    return this.authService.resendVerifyEmail(email);
+  }
+
+  @Post('verify-email-otp')
+  verifyEmailOtp(@Body() body: { email: string; otp: string }) {
+    return this.authService.verifyEmailOtp(body.email, body.otp);
   }
 
   @Post('register') register(@Body() dto: RegisterDto) {
@@ -101,7 +110,6 @@ export class AuthController {
 
     return this.authService.logoutAllByRefresh(refreshToken, res);
   }
-
   @Post('2fa/setup')
   setup2FA(@Body() dto: Setup2FADto) {
     return this.authService.setup2FA(dto.userId);
@@ -136,5 +144,45 @@ export class AuthController {
   @Post('change-password')
   async changePassword(@Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(dto.actionToken, dto.newPassword);
+  }
+
+  @UseGuards(AuthGuard('google'))
+  @Get('google')
+  googleLogin() {}
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleCallback(@Req() req, @Res({ passthrough: true }) res: any) {
+    const ip =
+      req.headers['x-forwarded-for']?.split(',')[0] || req.ip || 'unknown';
+
+    await this.authService.socialLogin(
+      req.user,
+      req.headers['user-agent'],
+      ip,
+      res,
+      'buyer',
+    );
+    return res.redirect(process.env.BUYER_ENV);
+  }
+
+  @UseGuards(AuthGuard('facebook'))
+  @Get('facebook')
+  facebookLogin() {}
+
+  @Get('facebook/callback')
+  @UseGuards(AuthGuard('facebook'))
+  async facebookCallback(@Req() req, @Res({ passthrough: true }) res: any) {
+    const ip =
+      req.headers['x-forwarded-for']?.split(',')[0] || req.ip || 'unknown';
+
+    await this.authService.socialLogin(
+      req.user,
+      req.headers['user-agent'],
+      ip,
+      res,
+      'buyer',
+    );
+    return res.redirect(process.env.BUYER_ENV);
   }
 }

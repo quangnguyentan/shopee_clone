@@ -3,6 +3,7 @@
   "pages.auth.header.register.title": "Register",
   "pages.auth.header.you-need-to-help.title": "Need you help?",
   "pages.auth.login.title": "Login",
+  "pages.auth.header.verify.title": "Verify",
   "pages.auth.login.with.password.title": "Login with password",
   "pages.auth.login.with.qrcode.title": "Login with QR code",
   "pages.auth.login.username.placeholder": "Email/Phone number/Username",
@@ -44,5 +45,15 @@
   "pages.home.topbar.english": "English",
   "pages.home.topbar.profile.my-account": "My account",
   "pages.home.topbar.profile.my-order": "Order",
-  "pages.home.topbar.profile.logout": "Logout"
+  "pages.home.topbar.profile.logout": "Logout",
+  "pages.auth.error.invalid_email": "Invalid email address",
+  "pages.auth.error.invalid_phone": "Invalid phone number",
+  "pages.auth.error.password_min_6": "Password must be at least 6 characters",
+  "pages.auth.verify.required": "Your account {email} has not been verified yet. Please verify your email to continue logging in.",
+  "pages.auth.verify.title": "Verify your email",
+  "pages.auth.verify.button.verify": "Verify now",
+  "pages.auth.verify.button.resend": "Resend verification email",
+  "pages.auth.verify.resend.cooldown": "Resend in {seconds}s",
+  "pages.auth.verify.resend.success": "Verification email sent",
+  "pages.auth.verify.resend.wait": "Please wait {seconds}s"
 }

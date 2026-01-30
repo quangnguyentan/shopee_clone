@@ -11,8 +11,10 @@ const Header = () => {
   const renderTitle = useMemo(() => {
     if (location.includes("/buyer/login")) {
       return i18n.get("pages.auth.header.login.title");
-    } else {
+    } else if (location.includes("/buyer/signup")) {
       return i18n.get("pages.auth.header.register.title");
+    } else {
+      return i18n.get("pages.auth.header.verify.title");
     }
   }, [location]);
 
