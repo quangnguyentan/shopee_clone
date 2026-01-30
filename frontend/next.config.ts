@@ -1,10 +1,13 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === "production";
 const nextConfig: NextConfig = {
+  output: "export",
   images: {
     unoptimized: true,
   },
-  output: "standalone",
+  basePath: isProd ? "/shopee-clone" : "",
+  assetPrefix: isProd ? "/shopee-clone/" : "",
 };
 
 export default nextConfig;
