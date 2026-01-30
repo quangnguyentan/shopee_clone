@@ -1,4 +1,4 @@
-const extractUploadedImageUrl = (uploaded: any): string | null => {
+export const extractUploadedImageUrl = (uploaded: A): string | null => {
   if (!uploaded) return null;
 
   return (
