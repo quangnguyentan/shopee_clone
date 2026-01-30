@@ -21,6 +21,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "@/src/common/constants/navigate.constant";
 import { useLogoutMutation } from "@/src/common/api/auth.api";
 import { useAppSelector } from "@/src/common/hooks/useAppSelector";
+import { getAssetUrl } from "@/src/lib/assets";
 
 const TopBar = () => {
   const [, setLangState] = useState(i18n.getLanguage());
@@ -57,7 +58,7 @@ const TopBar = () => {
           trigger={
             <div className="flex items-center justify-center gap-2 cursor-pointer">
               <Image
-                src={`${process.env.NEXT_PUBLIC_API_URL}${me?.avatar}`}
+                src={getAssetUrl(me?.avatar) || ""}
                 alt="avatar"
                 className="rounded-full object-cover"
                 width={20}
@@ -85,7 +86,7 @@ const TopBar = () => {
               ))}
             </div>
           }
-          classNameContent="bg-white"
+          classNameContent="bg-white w-40"
         />
       );
     }
@@ -139,10 +140,10 @@ const TopBar = () => {
                 </span>
               </div>
               <div className="flex items-center flex-1 w-full ">
-                <Button className="bg-gray-notification flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
+                <Button className="bg-gray-blackground flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
                   {i18n.get("pages.auth.login.button-login")}
                 </Button>
-                <Button className="bg-gray-notification flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
+                <Button className="bg-gray-blackground flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
                   {i18n.get("pages.auth.register.button-register")}
                 </Button>
               </div>
@@ -179,7 +180,7 @@ const TopBar = () => {
               ))}
             </div>
           }
-          classNameContent="bg-white"
+          classNameContent="bg-white w-40"
         />
         {renderHoverCard}
       </div>

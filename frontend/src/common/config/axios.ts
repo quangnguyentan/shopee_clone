@@ -1,120 +1,65 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import axios from "axios";
-import { BaseQueryFn } from "@reduxjs/toolkit/query";
-import { store } from "../storage";
-import { logout } from "@/src/common/storage/auth.slice";
-import { AUTH_EXCLUDE_PATHS } from "../constants";
-import { getEnv } from "./env.client";
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+import { refreshApi } from "./refreshApi";
+import { api, pageUnloading } from "./api";
+import { AUTH_SCOPE } from "../constants";
 
-export function createApi() {
-  /**
-   * Axios instance
-   * - withCredentials: gửi HttpOnly cookie (accessToken, refreshToken)
-   */
-  const env = getEnv();
-  const api = axios.create({
-    baseURL: env.NEXT_PUBLIC_API_URL,
-    withCredentials: true,
-  });
+let appStore: A;
+let isRefreshing = false;
+let queue: ((err?: A) => void)[] = [];
 
-  /**
-   * Refresh queue
-   */
-  let isRefreshing = false;
-  let failedQueue: Array<{
-    resolve: (value?: any) => void;
-    reject: (reason?: any) => void;
-  }> = [];
-
-  const processQueue = (error: any = null) => {
-    failedQueue.forEach((prom) => {
-      if (error) prom.reject(error);
-      else prom.resolve(true);
-    });
-    failedQueue = [];
-  };
-
-  /**
-   * Response interceptor
-   * - 401 → gọi /auth/refresh
-   * - refresh OK → retry request cũ
-   * - refresh FAIL → logout
-   */
-  api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-      if (!originalRequest) return Promise.reject(error);
-      const isAuthExcluded = AUTH_EXCLUDE_PATHS.some((path) =>
-        originalRequest?.url?.includes(path)
-      );
-      const status = error.response?.status;
-      const data = error.response?.data;
-      if (
-        (status === 401 && data?.code === "AUTH.INVALID_REFRESH_TOKEN") ||
-        (status === 401 && originalRequest.url?.includes("/auth/refresh"))
-      ) {
-        store.dispatch(logout());
-        return Promise.reject(error);
-      }
-
-      if (
-        error.response?.status === 401 &&
-        !originalRequest._retry &&
-        !isAuthExcluded
-      ) {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
-          }).then(() => api(originalRequest));
-        }
-
-        originalRequest._retry = true;
-        isRefreshing = true;
-
-        try {
-          await api.post("/auth/refresh");
-
-          processQueue();
-          return api(originalRequest);
-        } catch (err) {
-          processQueue(err);
-          store.dispatch(logout());
-          return Promise.reject(err);
-        } finally {
-          isRefreshing = false;
-        }
-      }
-
-      return Promise.reject(error);
-    }
-  );
-  return api;
-}
-
-/**
- * RTK Query baseQuery dùng Axios
- */
-type AxiosBaseQueryArgs = {
-  url: string;
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  data?: any;
-  params?: any;
+export const injectStore = (store: A) => {
+  appStore = store;
 };
 
-export const axiosBaseQuery =
-  (): BaseQueryFn<AxiosBaseQueryArgs, unknown, unknown> =>
-  async ({ url, method, data, params }) => {
-    const api = createApi();
-    try {
-      const result = await api.request({ url, method, data, params });
-      return { data: result.data };
-    } catch (axiosError: any) {
-      return {
-        error: {
-          status: axiosError.response?.status,
-          data: axiosError.response?.data,
-        },
-      };
+const flushQueue = (err?: A) => {
+  queue.forEach((cb) => cb(err));
+  queue = [];
+};
+
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const original = error.config;
+    if (!original || !appStore) return Promise.reject(error);
+    if (pageUnloading) return Promise.reject(error);
+
+    if (original.url?.includes(`/auth/${AUTH_SCOPE}/refresh`)) {
+      return Promise.reject(error);
     }
-  };
+
+    const state = appStore.getState();
+
+    if (state.auth.bootstrapping) {
+      return Promise.reject(error);
+    }
+
+    if (error.response?.status !== 401 || original._retry) {
+      return Promise.reject(error);
+    }
+
+    original._retry = true;
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        queue.push((err) => {
+          if (err) reject(err);
+          else resolve(api(original));
+        });
+      });
+    }
+
+    isRefreshing = true;
+
+    try {
+      await refreshApi.refresh();
+      flushQueue();
+      return api(original);
+    } catch (err) {
+      flushQueue(err);
+
+      return Promise.reject(err);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+);

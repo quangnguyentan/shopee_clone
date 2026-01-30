@@ -3,7 +3,8 @@
 import { baseApi } from "@/src/common/config/baseApi";
 import { logout } from "../storage/auth.slice";
 import { clearMe } from "../storage/user.slice";
-
+import { AUTH_SCOPE } from "../constants";
+const SCOPE = "buyer";
 export const authApi = baseApi
   .enhanceEndpoints({
     addTagTypes: ["Auth"],
@@ -13,7 +14,6 @@ export const authApi = baseApi
     endpoints: (builder) => ({
       register: builder.mutation<any, { email: string; password: string }>({
         query: (body) => {
-          console.log(body);
           return {
             url: "auth/register",
             method: "POST",
@@ -24,7 +24,7 @@ export const authApi = baseApi
       login: builder.mutation<any, { identifier: string; password: string }>({
         query: (body) => {
           return {
-            url: "auth/login",
+            url: `auth/${SCOPE}/login`,
             method: "POST",
             data: body,
           };
@@ -39,28 +39,47 @@ export const authApi = baseApi
       }),
       verify2FA: builder.mutation<any, { userId: number; token: string }>({
         query: (body) => ({
-          url: "auth/2fa/verify",
+          url: `auth/2fa/verify`,
           method: "POST",
           data: body,
         }),
       }),
       logout: builder.mutation<any, void>({
-        query: () => {
-          return {
-            url: "auth/logout",
-            method: "POST",
-          };
+        query: () => ({ url: `auth/logout`, method: "POST" }),
+        async onQueryStarted(_, { dispatch }) {
+          dispatch(clearMe());
+          dispatch(logout());
+          dispatch(authApi.util.resetApiState());
         },
-        async onQueryStarted(_, { dispatch, queryFulfilled }) {
-          try {
-            await queryFulfilled;
-          } catch (err) {
-            console.error("Logout API failed", err);
-          } finally {
-            dispatch(logout());
-            dispatch(clearMe());
-          }
+      }),
+      logoutAll: builder.mutation<any, void>({
+        query: () => ({ url: `auth/logout-all`, method: "POST" }),
+        async onQueryStarted(_, { dispatch }) {
+          dispatch(clearMe());
+          dispatch(logout());
+          dispatch(authApi.util.resetApiState());
         },
+      }),
+      refresh: builder.mutation<any, void>({
+        query: () => ({ url: `auth/${AUTH_SCOPE}/refresh`, method: "POST" }),
+      }),
+      verifyEmailOtp: builder.mutation<any, { email: string; otp: string }>({
+        query: (body) => ({
+          url: "auth/verify-email-otp",
+          method: "POST",
+          data: body,
+        }),
+      }),
+
+      resendVerifyEmail: builder.mutation<
+        { cooldown?: number },
+        { email: string }
+      >({
+        query: (body) => ({
+          url: "auth/resend-verify-email",
+          method: "POST",
+          data: body,
+        }),
       }),
     }),
   });
@@ -70,4 +89,8 @@ export const {
   useSetup2FAMutation,
   useVerify2FAMutation,
   useLogoutMutation,
+  useLogoutAllMutation,
+  useRefreshMutation,
+  useVerifyEmailOtpMutation,
+  useResendVerifyEmailMutation,
 } = authApi;

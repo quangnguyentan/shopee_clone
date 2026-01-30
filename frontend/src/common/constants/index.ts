@@ -1,13 +1,18 @@
 import { I18nKeys } from "@/src/lib/locale";
-
+export const AUTH_SCOPE = "buyer" as const;
 export const AUTH_EXCLUDE_PATHS = [
-  "/auth/login",
   "/auth/register",
-  "/auth/refresh",
-  "/auth/2fa",
+  `/auth/${AUTH_SCOPE}/login`,
+  `/auth/${AUTH_SCOPE}/refresh`,
+  "/auth/logout",
+  "/auth/logout-all",
 ];
 
-export const AUTH_ROUTES = ["/buyer/login", "/buyer/signup"];
+export const AUTH_ROUTES = [
+  "/buyer/login",
+  "/buyer/signup",
+  "/buyer/verify-email",
+];
 export const PROTECTED_ROUTES = ["/profile", "/orders", "/cart"];
 
 export type LanguageKeys = "vi" | "en";

@@ -19,19 +19,15 @@ export default function ProtectedLayout({
   useEffect(() => {
     if (!bootstrapped) return;
 
-    if (!isAuthenticated && isProtectedRoute) {
-      router.replace("/buyer/login");
-    }
+    if (!isAuthenticated && isProtectedRoute) router.replace("/buyer/login");
 
-    if (isAuthenticated && isAuthRoute) {
-      router.replace("/");
-    }
+    if (isAuthenticated && isAuthRoute) router.replace("/");
   }, [bootstrapped, isAuthenticated, isAuthRoute, isProtectedRoute, router]);
 
   if (!bootstrapped) return <Loading />;
   if (
-    bootstrapped &&
-    ((isAuthenticated && isAuthRoute) || (!isAuthenticated && isProtectedRoute))
+    (isAuthenticated && isAuthRoute) ||
+    (!isAuthenticated && isProtectedRoute)
   )
     return <Loading />;
 

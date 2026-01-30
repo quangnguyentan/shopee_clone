@@ -2,7 +2,7 @@
 import { baseApi } from "../config/baseApi";
 import { User } from "../types/user.type";
 
-const userApi = baseApi
+export const userApi = baseApi
   .enhanceEndpoints({
     addTagTypes: ["User"],
   })

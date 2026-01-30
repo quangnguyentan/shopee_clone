@@ -1,34 +1,46 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  Patch,
+  Delete,
+} from '@nestjs/common';
 import { ProductImageService } from './product-image.service';
 import { CreateProductImageDto } from './dto/create-product-image.dto';
-import { UpdateProductImageDto } from './dto/update-product-image.dto';
+import { Auth } from '@/common/decorators/auth.decorator';
+import { BaseController } from '@/base/base.controller';
+import { ProductImage } from './entities/product-image.entity';
 
-@Controller('product-image')
-export class ProductImageController {
-  constructor(private readonly productImageService: ProductImageService) {}
-
-  @Post()
-  create(@Body() createProductImageDto: CreateProductImageDto) {
-    return this.productImageService.create(createProductImageDto);
+@Controller('product-images')
+export class ProductImageController extends BaseController<ProductImage> {
+  constructor(protected readonly service: ProductImageService) {
+    super(service);
   }
 
   @Get()
   findAll() {
-    return this.productImageService.findAll();
+    return this.service.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.productImageService.findOne(+id);
+    return this.service.findOneById(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductImageDto: UpdateProductImageDto) {
-    return this.productImageService.update(+id, updateProductImageDto);
+  @Post()
+  create(@Body() dto: CreateProductImageDto) {
+    return this.service.createImage(dto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.productImageService.remove(+id);
+  @Get('product/:id')
+  findByProduct(@Param('id') id: number) {
+    return this.service.findByProduct(+id);
+  }
+
+  @Patch(':id/set-primary')
+  setPrimary(@Param('id') id: number) {
+    return this.service.setPrimary(+id);
   }
 }

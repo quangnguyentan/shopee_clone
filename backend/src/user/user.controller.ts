@@ -12,41 +12,20 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { JwtAuthGuard } from '@/auth/guards/auth.guard';
-import { AppException } from '@/common/exceptions/app.exception';
-import { USER_ERROR } from '@/common/errors/user.error';
+import { Auth } from '@/common/decorators/auth.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { User } from './entities/user.entity';
+import { BaseController } from '@/base/base.controller';
+import { AuthRole } from '@/common/decorators/auth-role.decorator';
 
 @Controller('user')
-export class UserController {
-  constructor(private readonly userService: UserService) {}
-
-  @UseGuards(JwtAuthGuard)
+export class UserController extends BaseController<User> {
+  constructor(protected readonly service: UserService) {
+    super(service);
+  }
+  @Auth()
   @Get('me')
-  async getMe(@Req() req) {
-    return this.userService.getMe(req.user.userId);
-  }
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.userService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(+id, updateUserDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+  getMe(@CurrentUser() user) {
+    return this.service.getMe(user.userId);
   }
 }

@@ -11,7 +11,13 @@ export { IoReload } from "react-icons/io5";
 export { SiShopee } from "react-icons/si";
 export { CiSearch } from "react-icons/ci";
 export { GrLanguage } from "react-icons/gr";
-export { IoIosNotificationsOutline, IoIosArrowDown } from "react-icons/io";
+export { BsLightningFill } from "react-icons/bs";
+export {
+  IoIosNotificationsOutline,
+  IoIosArrowDown,
+  IoIosArrowForward,
+  IoIosArrowBack,
+} from "react-icons/io";
 export { MdOutlineContactSupport } from "react-icons/md";
 export const useShopeeLogo = () => {
   const location = usePathname();

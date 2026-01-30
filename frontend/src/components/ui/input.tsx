@@ -23,7 +23,7 @@ function Input({ className, type, startIcon, endIcon, ...props }: InputProps) {
           "selection:bg-primary selection:text-primary-foreground",
           "dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent",
           "py-1 text-base shadow-xs outline-none transition-[color,box-shadow]",
-          "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+          "focus-visible:border-ring",
           "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
           "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           startIcon && "pl-9",

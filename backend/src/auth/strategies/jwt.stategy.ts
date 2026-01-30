@@ -7,8 +7,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
-        ExtractJwt.fromAuthHeaderAsBearerToken(),
-        (req) => req?.cookies?.accessToken,
+        (req) => {
+          if (!req) return null;
+          const scope =
+            req.headers?.['x-auth-scope'] ||
+            req.params?.scope ||
+            req.user?.scope ||
+            'admin';
+          return req.cookies?.[`${scope}_access_token`] || null;
+        },
       ]),
       secretOrKey: process.env.JWT_ACCESS_SECRET || '',
     });
@@ -19,6 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: payload.email,
       role: payload.role,
       sessionId: payload.sessionId,
+      scope: payload.scope,
     };
   }
 }

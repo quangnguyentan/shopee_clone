@@ -6,15 +6,16 @@ import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { AppException } from '@/common/exceptions/app.exception';
 import { USER_ERROR } from '@/common/errors/user.error';
+import { BaseService } from '@/base/base.service';
 
 @Injectable()
-export class UserService {
+export class UserService extends BaseService<User> {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-  ) {}
-
-  async;
+  ) {
+    super(userRepo);
+  }
 
   async getMe(userId: number) {
     const user = await this.userRepo.findOne({
@@ -27,25 +28,5 @@ export class UserService {
     }
 
     return user;
-  }
-
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
-
-  findAll() {
-    return `This action returns all user`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
-
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
   }
 }

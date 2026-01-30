@@ -29,57 +29,44 @@ export class SessionsService {
     });
     if (oldSessions.length) {
       const ids = oldSessions.map((s) => s.id);
-
-      await this.sessionRepo.update({ id: In(ids) }, { revoked: true });
-      await this.sessionRepo.manager
-        .getRepository(RefreshToken)
-        .delete({ sessionId: In(ids) });
-
+      await this.sessionRepo.manager.transaction(async (manager) => {
+        await manager.update(Session, { id: In(ids) }, { revoked: true });
+        await manager.delete(RefreshToken, { sessionId: In(ids) });
+      });
       this.eventEmitter.emit('session.revoked', oldSessions);
     }
-
-    const session = await this.sessionRepo.create({
-      ...data,
-      revoked: false,
-    });
+    const session = await this.sessionRepo.create({ ...data, revoked: false });
     return await this.sessionRepo.save(session);
   }
 
-  async revokeSession(sessionId: string, revokedBySelf = false) {
+  async revokeSession(sessionId: string, options?: { silent?: boolean }) {
     const session = await this.sessionRepo.findOneBy({ id: sessionId });
     if (!session) return;
 
-    await this.sessionRepo.update(sessionId, { revoked: true });
-
-    await this.sessionRepo.manager.getRepository(RefreshToken).delete({
-      sessionId,
+    await this.sessionRepo.manager.transaction(async (manager) => {
+      await manager.update(Session, sessionId, { revoked: true });
+      await manager.delete(RefreshToken, { sessionId });
     });
-    this.eventEmitter.emit('session.revoked', {
-      sessions: [session],
-      revokedBySelf,
-    });
+    if (!options?.silent) {
+      this.eventEmitter.emit('session.revoked', [session]);
+    }
   }
 
-  async revokeAll(userId: number, revokedBySelf = false) {
+  async revokeAll(userId: number) {
     const sessions = await this.sessionRepo.find({
       where: { userId, revoked: false },
     });
 
     if (!sessions.length) return;
 
-    await this.sessionRepo.update(
-      { userId, revoked: false },
-      { revoked: true },
-    );
+    const ids = sessions.map((s) => s.id);
 
-    await this.sessionRepo.manager.getRepository(RefreshToken).delete({
-      session: { userId },
+    await this.sessionRepo.manager.transaction(async (manager) => {
+      await manager.update(Session, { id: In(ids) }, { revoked: true });
+      await manager.delete(RefreshToken, { sessionId: In(ids) });
     });
 
-    this.eventEmitter.emit('session.revoked', {
-      sessions,
-      revokedBySelf,
-    });
+    this.eventEmitter.emit('session.revoked', sessions);
   }
 
   async findById(id: string) {

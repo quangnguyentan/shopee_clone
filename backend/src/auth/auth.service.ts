@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, LessThan, Repository } from 'typeorm';
 import { User } from '@/user/entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { SessionsService } from '@/session/session.service';
-import { Session } from '@/session/entities/session.entity';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -14,19 +13,25 @@ import { randomUUID } from 'crypto';
 import {
   generateAccessToken,
   generateRefreshToken,
-  verifyToken,
+  verifyRefreshToken,
 } from '@/middleware/jwt';
 import { AppException } from '@/common/exceptions/app.exception';
 import { AUTH_ERROR } from '@/common/errors/auth.error';
 import { RegisterDto } from './dto/register.dto';
 import { generateFromEmail } from 'unique-username-generator';
 import { AVATAR_DEFAULT } from '@/common/constant/asset.constant';
+import { Cron } from '@nestjs/schedule';
+import * as nodemailer from 'nodemailer';
+import { generateOTP } from '@/common/utils/generateOTP';
 
 const QR_EXPIRE_MS = 60 * 1000;
+const RESEND_COOLDOWN_MS = 60 * 1000;
 const qrSessions = new Map<
   string,
   { status: 'PENDING' | 'VERIFIED'; userId: string | null; createdAt: number }
 >();
+
+export type AuthScope = 'admin' | 'buyer' | 'seller';
 
 @Injectable()
 export class AuthService {
@@ -71,23 +76,178 @@ export class AuthService {
       : { status: 'PENDING' };
   }
 
+  private async sendVerifyOtpEmail(email: string, otp: string) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_APP_PASSWORD,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"Shopee Clone" <${process.env.MAIL_USER}>`,
+      to: email,
+      subject: 'Verify your email',
+      html: `
+      <h3>Your verification code</h3>
+      <h1 style="letter-spacing:4px">${otp}</h1>
+      <p>This code will expire in 10 minutes</p>
+    `,
+    });
+  }
+
+  async resendVerifyEmail(email: string) {
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+
+    const now = Date.now();
+    if (
+      user.last_verify_email_sent_at &&
+      now - user.last_verify_email_sent_at.getTime() < RESEND_COOLDOWN_MS
+    ) {
+      return {
+        cooldown: Math.ceil(
+          (RESEND_COOLDOWN_MS -
+            (now - user.last_verify_email_sent_at.getTime())) /
+            1000,
+        ),
+      };
+    }
+
+    const otp = generateOTP();
+    user.email_verify_otp = await bcrypt.hash(otp, 10);
+    user.email_verify_otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
+    user.last_verify_email_sent_at = new Date();
+
+    await this.userRepo.save(user);
+    await this.sendVerifyOtpEmail(email, otp);
+
+    return { success: true, cooldown: 60 };
+  }
+
+  async verifyEmailOtp(email: string, otp: string) {
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+
+    if (user.email_verified)
+      throw new AppException(AUTH_ERROR.EMAIL_ALREADY_VERIFIED);
+
+    if (
+      !user.email_verify_otp ||
+      !user.email_verify_otp_expires_at ||
+      user.email_verify_otp_expires_at < new Date()
+    ) {
+      throw new AppException(AUTH_ERROR.OTP_EXPIRED);
+    }
+
+    const isValid = await bcrypt.compare(otp, user.email_verify_otp);
+    if (!isValid) throw new AppException(AUTH_ERROR.INVALID_OTP);
+
+    user.email_verified = true;
+    user.email_verify_otp = null;
+    user.email_verify_otp_expires_at = null;
+
+    await this.userRepo.save(user);
+
+    return { message: 'Email verified successfully' };
+  }
+
   async register(dto: RegisterDto) {
     const exists = await this.userRepo.findOne({ where: { email: dto.email } });
     if (exists) throw new AppException(AUTH_ERROR.USER_ALREADY_EXISTS);
 
-    const hash = await bcrypt.hash(dto.password, 10);
+    const otp = generateOTP();
+    const otpHash = await bcrypt.hash(otp, 10);
+
     const user = this.userRepo.create({
       email: dto.email,
-      name: generateFromEmail(dto.email, {
-        randomDigits: 2,
-        stripLeadingDigits: true,
-      }),
-      password: hash,
-      two_factor_enabled: false,
+      phone: dto.phone,
+      password: await bcrypt.hash(dto.password, 10),
+      name: generateFromEmail(dto.email),
       avatar: AVATAR_DEFAULT,
+      auth_provider: 'local',
+      email_verified: false,
+      email_verify_otp: otpHash,
+      email_verify_otp_expires_at: new Date(Date.now() + 10 * 60 * 1000),
+      last_verify_email_sent_at: new Date(),
     });
+
     await this.userRepo.save(user);
-    return { message: 'Register success', userId: user.id };
+    await this.sendVerifyOtpEmail(dto.email, otp);
+
+    return {
+      message: 'OTP sent to email',
+      email: dto.email,
+    };
+  }
+
+  async socialLogin(
+    profile: {
+      provider: 'google' | 'facebook';
+      providerId: string;
+      email: string;
+      name: string;
+      avatar: string;
+    },
+    userAgent: string,
+    ip: string,
+    res: Response,
+    scope: AuthScope,
+  ) {
+    if (scope === 'admin') {
+      throw new AppException(AUTH_ERROR.SOCIAL_LOGIN_NOT_ALLOWED);
+    }
+
+    let user = await this.userRepo.findOne({
+      where: {
+        auth_provider: profile.provider,
+        social_id: profile.providerId,
+      },
+    });
+
+    if (!user) {
+      const emailUser = await this.userRepo.findOne({
+        where: { email: profile.email },
+      });
+
+      if (emailUser) {
+        if (emailUser.auth_provider === 'local' && emailUser.email_verified) {
+          emailUser.auth_provider = profile.provider;
+          emailUser.social_id = profile.providerId;
+          user = await this.userRepo.save(emailUser);
+        } else {
+          throw new AppException(AUTH_ERROR.ACCOUNT_ALREADY_EXISTS);
+        }
+      }
+    }
+    if (!user) {
+      user = this.userRepo.create({
+        email: profile.email,
+        name: profile.name,
+        avatar: profile.avatar,
+        auth_provider: profile.provider,
+        social_id: profile.providerId,
+        email_verified: true,
+        role: scope,
+      });
+      await this.userRepo.save(user);
+    }
+
+    const session = await this.sessionsService.createSession({
+      userId: user.id,
+      ip,
+      deviceType: this.getDeviceType(userAgent),
+      userAgent,
+    });
+
+    return this.issueTokens(
+      this.refreshRepo.manager,
+      user,
+      session.id,
+      res,
+      scope,
+    );
   }
 
   async login(
@@ -96,10 +256,16 @@ export class AuthService {
     userAgent: string,
     ip: string,
     res: Response,
+    scope: AuthScope,
   ) {
     const user = await this.userRepo.findOne({ where: { email: identifier } });
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
-
+    if (user.role !== scope) {
+      throw new AppException(AUTH_ERROR.UNAUTHORIZED);
+    }
+    if (user.auth_provider === 'local' && !user.email_verified) {
+      throw new AppException(AUTH_ERROR.EMAIL_NOT_VERIFIED, identifier);
+    }
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) throw new AppException(AUTH_ERROR.INVALID_PASSWORD);
 
@@ -112,53 +278,152 @@ export class AuthService {
       deviceType,
       userAgent,
     });
-    return await this.issueTokens(user, session.id, res);
+    return await this.issueTokens(
+      this.refreshRepo.manager,
+      user,
+      session.id,
+      res,
+      scope,
+    );
   }
-
-  async refreshToken(oldToken: string, res: Response) {
+  async refreshToken(refreshToken: string, res: Response, scope: AuthScope) {
+    if (!refreshToken) {
+      this.clearAuthCookies(res, scope);
+      throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
+    }
     let payload: any;
     try {
-      payload = verifyToken(oldToken);
+      payload = verifyRefreshToken(refreshToken);
     } catch {
+      this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
-
-    const token = await this.refreshRepo.findOne({
-      where: { jti: payload.jti, revoked: false },
+    if (payload.scope !== scope) {
+      this.clearAuthCookies(res, scope);
+      throw new AppException(AUTH_ERROR.SCOPE_MISMATCH);
+    }
+    const oldToken = await this.refreshRepo.findOne({
+      where: {
+        jti: payload.jti,
+        sessionId: payload.sessionId,
+        revoked: false,
+      },
     });
-    if (!token) throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
-
-    const isMatch = await bcrypt.compare(oldToken, token.token_hash);
-    if (!isMatch) throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
-
-    const session = await this.sessionsService.findById(token.sessionId);
-
-    if (!session || session.revoked) {
-      await this.refreshRepo.delete({ id: token.id });
+    if (!oldToken) {
+      this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
+    const isMatch = await bcrypt.compare(refreshToken, oldToken.token_hash);
+    if (!isMatch) {
+      this.clearAuthCookies(res, scope);
+      throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
+    }
+
+    const session = await this.sessionsService.findById(payload.sessionId);
+    if (!session || session.revoked) {
+      this.clearAuthCookies(res, scope);
+      throw new AppException(AUTH_ERROR.SESSION_REVOKED);
+    }
+
     const user = await this.userRepo.findOneBy({ id: session.userId });
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+    return this.refreshRepo.manager.transaction(async (manager) => {
+      const result = await this.issueTokens(
+        manager,
+        user,
+        session.id,
+        res,
+        payload.scope,
+      );
 
-    await this.refreshRepo.delete({ id: token.id });
+      await manager.update(
+        RefreshToken,
+        { id: oldToken.id },
+        { revoked: true },
+      );
 
-    return this.issueTokens(user, session.id, res);
+      return result;
+    });
+  }
+  @Cron('0 3 * * *')
+  async cleanupRevokedTokens() {
+    await this.refreshRepo.delete({
+      revoked: true,
+      created_at: LessThan(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+    });
+  }
+  private clearAuthCookies(res: Response, scope: AuthScope) {
+    const { access, refresh } = this.getAuthCookieNames(scope);
+    res.clearCookie(access, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+    });
+
+    res.clearCookie(refresh, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+    });
   }
 
-  async logout(sessionId: string, res: Response) {
-    await this.sessionsService.revokeSession(sessionId, true);
-    await this.refreshRepo.delete({ sessionId });
+  private clearAllAuthCookies(res: Response) {
+    (['admin', 'buyer', 'seller'] as AuthScope[]).forEach((scope) =>
+      this.clearAuthCookies(res, scope),
+    );
+  }
+  async logoutByRefresh(refreshToken: string, res: Response) {
+    if (!refreshToken) {
+      this.clearAllAuthCookies(res);
+      return { success: true };
+    }
 
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    let payload: any;
+    try {
+      payload = verifyRefreshToken(refreshToken);
+    } catch {
+      this.clearAllAuthCookies(res);
+      return { success: true };
+    }
+
+    await this.sessionsService.revokeSession(payload.sessionId, {
+      silent: true,
+    });
+    await this.refreshRepo.delete({ sessionId: payload.sessionId });
+
+    this.clearAuthCookies(res, payload.scope);
     return { success: true };
   }
 
-  async logoutAll(userId: number, res: Response) {
-    await this.sessionsService.revokeAll(userId, true);
-    await this.refreshRepo.delete({ session: { userId } });
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+  async logoutAllByRefresh(refreshToken: string, res: Response) {
+    if (!refreshToken) {
+      this.clearAllAuthCookies(res);
+      return { success: true };
+    }
+
+    let payload: any;
+    try {
+      payload = verifyRefreshToken(refreshToken);
+    } catch {
+      this.clearAllAuthCookies(res);
+      return { success: true };
+    }
+
+    const session = await this.sessionsService.findById(payload.sessionId);
+    if (!session) {
+      this.clearAllAuthCookies(res);
+      return { success: true };
+    }
+
+    await this.sessionsService.revokeAll(session.userId);
+
+    await this.refreshRepo.delete({
+      session: { userId: session.userId },
+    });
+
+    this.clearAllAuthCookies(res);
     return { success: true };
   }
 
@@ -176,32 +441,49 @@ export class AuthService {
       },
     };
   }
+  getAuthCookieNames(scope: AuthScope) {
+    return {
+      access: `${scope}_access_token`,
+      refresh: `${scope}_refresh_token`,
+    };
+  }
 
-  private async issueTokens(user: User, sessionId: string, res: Response) {
-    const accessToken = generateAccessToken(user, sessionId);
-    const { token: refreshToken, jti } = generateRefreshToken(user);
+  private async issueTokens(
+    manager: EntityManager,
+    user: User,
+    sessionId: string,
+    res: Response,
+    scope: AuthScope,
+  ) {
+    const { access, refresh } = this.getAuthCookieNames(scope);
+    const accessToken = generateAccessToken(user, sessionId, scope);
+    const { token: refreshToken, jti } = generateRefreshToken(
+      user,
+      sessionId,
+      scope,
+    );
     const tokenHash = await bcrypt.hash(refreshToken, 10);
-    await this.refreshRepo.manager.transaction(async (manager) => {
-      await manager.delete(RefreshToken, { sessionId });
-      const newToken = manager.create(RefreshToken, {
-        sessionId,
-        token_hash: tokenHash,
-        revoked: false,
-        jti,
-      });
-      await manager.save(newToken);
+    const newToken = manager.create(RefreshToken, {
+      sessionId,
+      token_hash: tokenHash,
+      revoked: false,
+      jti,
     });
 
-    res.cookie('accessToken', accessToken, {
+    await manager.save(newToken);
+
+    res.cookie(access, accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
       maxAge: 15 * 60 * 1000,
     });
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie(refresh, refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -223,7 +505,12 @@ export class AuthService {
     return { qr, secret: secret.base32 };
   }
 
-  async verify2FA(userId: number, token: string, res: Response) {
+  async verify2FA(
+    userId: number,
+    token: string,
+    res: Response,
+    scope: AuthScope,
+  ) {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user || !user.two_factor_secret)
       throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
@@ -244,7 +531,13 @@ export class AuthService {
       ip: '2FA',
       deviceType: 'desktop',
     });
-    return this.issueTokens(user, session.id, res);
+    return this.issueTokens(
+      this.refreshRepo.manager,
+      user,
+      session.id,
+      res,
+      scope,
+    );
   }
 
   async requestChangePassword(userId: number) {

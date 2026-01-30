@@ -1,34 +1,58 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+// shop/shop.controller.ts
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ShopService } from './shop.service';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
+import { BaseController } from '@/base/base.controller';
+import { Shop } from './entities/shop.entity';
+import { Auth } from '@/common/decorators/auth.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { AuthRole } from '@/common/decorators/auth-role.decorator';
 
-@Controller('shop')
-export class ShopController {
-  constructor(private readonly shopService: ShopService) {}
-
-  @Post()
-  create(@Body() createShopDto: CreateShopDto) {
-    return this.shopService.create(createShopDto);
+@Controller('shops')
+export class ShopController extends BaseController<Shop> {
+  constructor(protected readonly service: ShopService) {
+    super(service);
   }
 
   @Get()
   findAll() {
-    return this.shopService.findAll();
+    return this.service.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.shopService.findOne(+id);
+    return this.service.findOneById(+id);
   }
 
+  @Auth()
+  @AuthRole('admin')
+  @Post()
+  createShop(@Body() dto: CreateShopDto) {
+    return this.service.createShop(dto);
+  }
+
+  @Auth()
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateShopDto: UpdateShopDto) {
-    return this.shopService.update(+id, updateShopDto);
+  updateShop(
+    @Param('id') id: string,
+    @CurrentUser() user,
+    @Body() dto: UpdateShopDto,
+  ) {
+    return this.service.updateShop(+id, user, dto);
   }
 
+  @Auth()
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.shopService.remove(+id);
+  deleteShop(@Param('id') id: string, @CurrentUser() user) {
+    return this.service.deleteShop(+id, user.userId);
   }
 }

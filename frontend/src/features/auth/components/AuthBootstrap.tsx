@@ -1,14 +1,23 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch } from "@/src/common/hooks/useAppSelector";
-import { loginSuccess, finishBootstrap } from "@/src/common/storage/auth.slice";
+import { useEffect, useRef } from "react";
+import {
+  useAppDispatch,
+  useAppSelector,
+} from "@/src/common/hooks/useAppSelector";
+import {
+  finishBootstrap,
+  loginSuccess,
+  logout,
+  startBootstrap,
+} from "@/src/common/storage/auth.slice";
+import { clearMe, setMe } from "@/src/common/storage/user.slice";
 import { socket } from "@/src/common/config/socket";
 import { toast } from "sonner";
 import { useSingleTabGuard } from "@/src/common/hooks/useSingleTabGuard";
-import { clearMe, setMe } from "@/src/common/storage/user.slice";
-import { createApi } from "@/src/common/api";
+import { persistor } from "@/src/common/storage";
+import { refreshApi } from "@/src/common/config/refreshApi";
+import { Loading } from "@/src/components/shared/Loading";
 
 export default function AuthBootstrap({
   children,
@@ -16,44 +25,62 @@ export default function AuthBootstrap({
   children: React.ReactNode;
 }) {
   const dispatch = useAppDispatch();
+  const ran = useRef(false);
   const blocked = useSingleTabGuard();
 
+  const { bootstrapped } = useAppSelector((s) => s.auth);
+  const sessionId = useAppSelector((s) => s.user.sessionId);
+
   useEffect(() => {
-    const bootstrap = async () => {
-      const api = createApi();
+    if (ran.current) return;
+    ran.current = true;
+    dispatch(startBootstrap());
+    (async () => {
       try {
-        const res = await api.post("/auth/refresh");
+        const res = await refreshApi.refresh();
+        const { authenticated, user, sessionId } = res.data;
+
+        if (!authenticated) throw new Error();
+
+        dispatch(setMe({ user, sessionId }));
         dispatch(loginSuccess());
-        dispatch(setMe(res.data.user));
-        if (!socket.connected) socket.connect();
-        if (res.data.sessionId) {
-          socket.emit("register_session", res.data.sessionId);
-        }
       } catch {
         dispatch(clearMe());
-        socket.disconnect();
+        dispatch(logout());
       } finally {
         dispatch(finishBootstrap());
       }
-    };
-
-    bootstrap();
+    })();
   }, [dispatch]);
 
   useEffect(() => {
-    const onForceLogout = async (data: any) => {
-      toast.error(data?.reason ?? "Session expired");
-      if (socket.connected) {
-        socket.disconnect();
-      }
-      dispatch(clearMe());
-    };
-    socket.on("force_logout", onForceLogout);
+    if (!sessionId) return;
 
-    return () => {
-      socket.off("force_logout", onForceLogout);
+    if (!socket.connected) {
+      socket.connect();
+      socket.once("connect", () => socket.emit("register_session", sessionId));
+    } else {
+      socket.emit("register_session", sessionId);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    const handleForceLogout = (data: A) => {
+      if (data?.sessionId === sessionId) return;
+
+      toast.error(data?.reason ?? "Session expired");
+      dispatch(clearMe());
+      dispatch(logout());
+      persistor.purge();
+
+      if (socket.connected) socket.disconnect();
     };
-  }, [dispatch]);
+
+    socket.on("force_logout", handleForceLogout);
+    return () => {
+      socket.off("force_logout", handleForceLogout);
+    };
+  }, [dispatch, sessionId]);
 
   if (blocked) {
     return (
@@ -65,7 +92,7 @@ export default function AuthBootstrap({
           <p className="text-[16] my-4">
             Nhấn kích hoạt để sử dụng tại tab này
           </p>
-          <div className="w-full flex items-center justify-end ">
+          <div className="w-full flex items-center justify-end">
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-blue-600 text-white rounded"
@@ -77,6 +104,8 @@ export default function AuthBootstrap({
       </div>
     );
   }
+
+  if (!bootstrapped) return <Loading />;
 
   return <>{children}</>;
 }
