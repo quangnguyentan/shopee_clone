@@ -37,6 +37,6 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-scope'],
   });
-  await app.listen(process.env.PORT ?? 8080);
+  await app.listen(process.env.PORT ?? 8080, '0.0.0.0');
 }
 bootstrap();
