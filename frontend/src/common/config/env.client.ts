@@ -1,4 +1,3 @@
-// src/common/config/env.client.ts
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -9,11 +8,27 @@ const envSchema = z.object({
 });
 
 export function getEnv() {
-  // chỉ parse runtime, không top-level
-  return envSchema.parse({
+  const parsed = envSchema.safeParse({
     NEXT_PUBLIC_RECAPTCHA_SITE_KEY: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL,
     NODE_ENV: process.env.NODE_ENV ?? "development",
   });
+
+  if (!parsed.success) {
+    if (typeof window === "undefined") {
+      return {
+        NEXT_PUBLIC_RECAPTCHA_SITE_KEY: "",
+        NEXT_PUBLIC_API_URL: "",
+        NEXT_PUBLIC_SOCKET_URL: "",
+        NODE_ENV: "production",
+      };
+    }
+
+    throw new Error(
+      "Missing NEXT_PUBLIC env variables. Check Render environment config.",
+    );
+  }
+
+  return parsed.data;
 }
