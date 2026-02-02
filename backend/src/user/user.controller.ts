@@ -28,4 +28,9 @@ export class UserController extends BaseController<User> {
   getMe(@CurrentUser() user) {
     return this.service.getMe(user.userId);
   }
+  @AuthRole("admin")
+  @Get("")
+  get() {
+    return 
+  }
 }
