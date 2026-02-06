@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import flash_sale from "@/src/assest/flash_sale.png";
 import { TimeBox } from "./TimeBox";
 import { Colon } from "./Colon";
@@ -20,21 +20,37 @@ import {
   BsLightningFill,
   IoIosArrowForward,
 } from "@/src/components/shared/Icon";
-const END_TIME = Date.now() + 120 * 60 * 1000;
+import {
+  useGetActiveFlashSaleQuery,
+  useGetFlashSaleItemsQuery,
+} from "@/src/common/api/flash-sale.api";
+import { getAssetUrl } from "@/src/lib/assets";
 
 const FlashSale = () => {
-  const data = Array.from({ length: 120 });
+  const { data: flashSale } = useGetActiveFlashSaleQuery();
 
-  const [time, setTime] = useState(() => END_TIME - Date.now());
+  const flashSaleId = flashSale?.id;
+
+  const { data: items = [] } = useGetFlashSaleItemsQuery(flashSaleId!, {
+    skip: !flashSaleId,
+  });
+  console.log(items, "items");
+  const [time, setTime] = useState(() => {
+    const END_TIME = flashSale ? Date.now() + flashSale.countdown : null;
+    return END_TIME ? END_TIME - Date.now() : 0;
+  });
 
   useEffect(() => {
+    if (!flashSale) return;
+
+    const END_TIME = Date.now() + flashSale.countdown;
     const id = setInterval(() => {
       const diff = END_TIME - Date.now();
       setTime(diff > 0 ? diff : 0);
     }, 1000);
 
     return () => clearInterval(id);
-  }, []);
+  }, [flashSale]);
 
   const h = Math.floor(time / 3600000);
   const m = Math.floor((time / 60000) % 60);
@@ -82,7 +98,7 @@ const FlashSale = () => {
           className="w-full"
         >
           <CarouselContent>
-            {data.map((_, index) => (
+            {items?.map((item, index) => (
               <CarouselItem key={index} className="basis-1/5 !p-0">
                 <div className="grid grid-rows-1 h-full">
                   {[0].map((row) => (
@@ -92,19 +108,35 @@ const FlashSale = () => {
                     >
                       <CardContent
                         className="flex items-center justify-center h-full p-0 w-full flex-col gap-4 hover:shadow-lg cursor-pointer"
-                        onClick={() => {}}
+                        onClick={() => {
+                          console.log(
+                            item?.product_variant?.product?.images?.filter(
+                              (i: A) => i?.is_primary,
+                            ),
+                          );
+                        }}
                       >
                         <div className="w-[90%] h-44 relative">
                           <Image
-                            src={phone}
-                            alt="phone"
-                            className="w-full h-full object-cover"
-                            priority
-                            draggable={false}
+                            src={
+                              item?.product_variant?.product?.images?.find(
+                                (i: A) => i?.is_primary,
+                              )?.url ?? "/placeholder.png"
+                            }
+                            alt={
+                              item?.product_variant?.product?.name ??
+                              "product image"
+                            }
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 90%"
+                            priority={false}
                           />
                           <div className="absolute top-0 right-0 bg-yellow-primary text-lightning flex items-center gap-1 rounded-bl-md">
                             <BsLightningFill size={14} />
-                            <span className="text-sm font-semibold">-25%</span>
+                            <span className="text-sm font-semibold">
+                              ${item?.discount_percent}%
+                            </span>
                           </div>
                           <div className="absolute top-4 left-0 w-full h-full">
                             <Image
@@ -123,7 +155,7 @@ const FlashSale = () => {
                         </div>
                         <div className="space-y-2 w-[70%] flex items-center justify-center flex-col">
                           <strong className="text-red-primary text-xl font-normal flex gap-0.5">
-                            9.000
+                            {item?.flash_price.toLocaleString()}
                             <span className="">₫</span>
                           </strong>
                           <div className="h-4 relative w-full flex items-center justify-center">

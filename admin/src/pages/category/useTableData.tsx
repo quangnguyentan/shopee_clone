@@ -9,9 +9,19 @@ import { useNavigate } from "react-router-dom";
 const useTableData = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const navigate = useNavigate();
-  const { data, isLoading, isFetching } = useGetAllCategoriesQuery();
-  const categories = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const onPageChange = (p: number, l: number) => {
+    setPage(p);
+    setLimit(l);
+  };
+  const {
+    data: categories,
+    isLoading,
+    isFetching,
+  } = useGetAllCategoriesQuery();
+  const data = categories?.items ?? [];
+  const total = categories?.total ?? 0;
   const hasSelection = selectedRowKeys.length > 0;
 
   const canEdit = selectedRowKeys.length === 1;
@@ -115,8 +125,11 @@ const useTableData = () => {
 
   return {
     columns,
-    categories,
+    data,
     total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,

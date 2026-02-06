@@ -20,6 +20,8 @@ import { Verify2FAActionDto } from './dto/verify-2fa-action.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { Auth } from '@/common/decorators/auth.decorator';
 import { AuthGuard } from '@nestjs/passport';
+import { SuperAdminGuard } from './guards/supper-admin.guard';
+import { CreateAdminDto } from './dto/create-admin.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -184,5 +186,23 @@ export class AuthController {
       'buyer',
     );
     return res.redirect(process.env.BUYER_ENV);
+  }
+
+  @UseGuards(SuperAdminGuard)
+  @Post('admins')
+  createAdmin(@Body() dto: CreateAdminDto, @Req() req) {
+    return this.authService.createAdmin(dto, req.user);
+  }
+
+  @UseGuards(SuperAdminGuard)
+  @Post('admins/:id/approve')
+  approveAdmin(@Param('id') id: number, @Req() req) {
+    return this.authService.approveAdmin(+id, req.user);
+  }
+
+  @UseGuards(SuperAdminGuard)
+  @Post('admins/:id/suspend')
+  suspendAdmin(@Param('id') id: number, @Req() req) {
+    return this.authService.suspendAdmin(+id, req.user);
   }
 }

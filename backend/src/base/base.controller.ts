@@ -1,6 +1,7 @@
-import { Body, Get, Param, Post, Delete, Patch } from '@nestjs/common';
+import { Body, Get, Param, Post, Delete, Patch, Query } from '@nestjs/common';
 import { BaseService } from './base.service';
 import { BaseEntity } from './base.entity';
+import { PaginationDto } from './base.dto';
 
 export class BaseController<T extends BaseEntity> {
   constructor(protected readonly service: BaseService<T>) {}
@@ -11,8 +12,8 @@ export class BaseController<T extends BaseEntity> {
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query() query: PaginationDto) {
+    return this.service.findAll(query);
   }
 
   @Get(':id')

@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ProductVariantService } from './product-variant.service';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
@@ -15,6 +16,7 @@ import { BaseController } from '@/base/base.controller';
 import { ProductVariant } from './entities/product-variant.entity';
 import { Auth } from '@/common/decorators/auth.decorator';
 import { AuthRole } from '@/common/decorators/auth-role.decorator';
+import { PaginationDto } from '@/base/base.dto';
 
 @Controller('product-variants')
 export class ProductVariantController extends BaseController<ProductVariant> {
@@ -23,8 +25,8 @@ export class ProductVariantController extends BaseController<ProductVariant> {
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query() query: PaginationDto) {
+    return this.service.findAll(query);
   }
 
   @Get(':id')

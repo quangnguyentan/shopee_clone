@@ -5,6 +5,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url(),
   NEXT_PUBLIC_SOCKET_URL: z.string().url(),
   NODE_ENV: z.enum(["development", "production", "test"]),
+  NEXT_PUBLIC_ASSETS_URL: z.string().url(),
 });
 
 export function getEnv() {
@@ -13,6 +14,7 @@ export function getEnv() {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL,
     NODE_ENV: process.env.NODE_ENV ?? "development",
+    NEXT_PUBLIC_ASSETS_URL: process.env.NEXT_PUBLIC_ASSETS_URL,
   });
 
   if (!parsed.success) {
@@ -22,6 +24,7 @@ export function getEnv() {
         NEXT_PUBLIC_API_URL: "",
         NEXT_PUBLIC_SOCKET_URL: "",
         NODE_ENV: "production",
+        NEXT_PUBLIC_ASSETS_URL: "",
       };
     }
 

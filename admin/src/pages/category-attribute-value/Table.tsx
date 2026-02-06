@@ -9,7 +9,11 @@ import NProgress from "@/common/utils/nprogress";
 export const Table = () => {
   const {
     columns,
-    items,
+    data,
+    total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,
@@ -42,8 +46,12 @@ export const Table = () => {
       <Spin spinning={isFetching}>
         <GenericTable<CategoryAttributeValue>
           rowKey="id"
-          data={items}
+          data={data ?? []}
           columns={columns as A}
+          total={total}
+          page={page}
+          limit={limit}
+          onPageChange={onPageChange}
           rowSelection={rowSelection}
         />
       </Spin>

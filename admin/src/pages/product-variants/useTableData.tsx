@@ -17,14 +17,20 @@ type ToolbarAction = {
 
 const useTableData = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const onPageChange = (p: number, l: number) => {
+    setPage(p);
+    setLimit(l);
+  };
   const navigate = useNavigate();
 
   const {
     data: productVariantsData,
     isLoading,
     isFetching,
-  } = useGetAllProductVariantsQuery();
-  const products = productVariantsData?.items ?? [];
+  } = useGetAllProductVariantsQuery({ page, limit });
+  const data = productVariantsData?.items ?? [];
   const total = productVariantsData?.total ?? 0;
 
   const hasSelection = selectedRowKeys.length > 0;
@@ -40,12 +46,12 @@ const useTableData = () => {
     console.log("Delete products:", selectedRowKeys);
   }, [selectedRowKeys]);
 
-  const handleAddAttribute = useCallback(
-    (record: ProductVariant) => {
-      navigate(`/product-variants/${record.id}/attributes/create`);
-    },
-    [navigate],
-  );
+  // const handleAddAttribute = useCallback(
+  //   (record: ProductVariant) => {
+  //     navigate(`/product-variants/${record.id}/attributes/create`);
+  //   },
+  //   [navigate],
+  // );
   const columns = useMemo(
     () => [
       {
@@ -93,14 +99,14 @@ const useTableData = () => {
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
             />
-            <Button type="link" onClick={() => handleAddAttribute(record)}>
+            {/* <Button type="link" onClick={() => handleAddAttribute(record)}>
               Attributes
-            </Button>
+            </Button> */}
           </Space>
         ),
       },
     ],
-    [handleEdit, handleAddAttribute],
+    [handleEdit],
   );
 
   const rowSelection: TableRowSelection<ProductVariant> = {
@@ -136,8 +142,11 @@ const useTableData = () => {
 
   return {
     columns,
-    products,
+    data,
     total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,

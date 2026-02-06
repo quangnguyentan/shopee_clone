@@ -4,12 +4,16 @@ import { Button, Spin } from "antd";
 import TableSkeleton from "@/components/TableSkeleton";
 import { useEffect } from "react";
 import NProgress from "@/common/utils/nprogress";
-import type { VariantOption } from "@/common/types/variant-option.type";
+import type { FlashSale } from "@/common/types/flash-sales.type";
 
 export const Table = () => {
   const {
     columns,
-    products,
+    data,
+    total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,
@@ -45,10 +49,14 @@ export const Table = () => {
       </div>
 
       <Spin spinning={isFetching}>
-        <GenericTable<VariantOption>
+        <GenericTable<FlashSale>
           rowKey="id"
-          data={products}
+          data={data ?? []}
           columns={columns as A}
+          total={total}
+          page={page}
+          limit={limit}
+          onPageChange={onPageChange}
           rowSelection={rowSelection}
         />
       </Spin>

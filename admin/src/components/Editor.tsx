@@ -103,6 +103,12 @@ const Editor = forwardRef<QuillEditorRef, Props>(
           <button className="ql-bold" />
           <button className="ql-italic" />
           <button className="ql-underline" />
+          <select className="ql-align">
+            <option selected />
+            <option value="center" />
+            <option value="right" />
+            <option value="justify" />
+          </select>
           <button className="ql-list" value="ordered" />
           <button className="ql-list" value="bullet" />
           <button className="ql-link" />

@@ -36,6 +36,12 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   two_factor_secret: string;
 
+  @Column({ type: 'smallint', default: 0 })
+  admin_level: number; // 0 = normal, 1 = admin, 2 = super admin
+
+  @Column({ type: 'varchar', default: 'ACTIVE' })
+  status: 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+
   @Column({ type: 'boolean', default: false })
   email_verified: boolean;
 

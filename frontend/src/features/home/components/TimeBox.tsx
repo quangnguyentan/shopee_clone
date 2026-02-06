@@ -11,7 +11,7 @@ export const TimeBox = ({ value }: TimeBoxProps) => {
   const prev = useRef(value);
 
   const [keys, setKeys] = useState<string[]>(
-    value.split("").map((d, i) => `${d}-${i}`)
+    value.split("").map((d, i) => `${d}-${i}`),
   );
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export const TimeBox = ({ value }: TimeBoxProps) => {
         if (i === 0 && prev.current[1] === "0" && prev.current[0] !== digit)
           return `${digit}-${i}-${Date.now()}`;
         return oldKeys[i];
-      })
+      }),
     );
 
     prev.current = value;

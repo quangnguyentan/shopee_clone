@@ -21,6 +21,11 @@ export interface GenericTableColumn<T> {
 
 interface GenericTableProps<T extends object> {
   data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  onPageChange: (page: number, limit: number) => void;
+
   columns: GenericTableColumn<T>[];
   rowKey: KeyOf<T>;
   rowSelection?: TableRowSelection<T>;
@@ -28,6 +33,10 @@ interface GenericTableProps<T extends object> {
 
 function GenericTable<T extends object>({
   data,
+  total,
+  page,
+  limit,
+  onPageChange,
   columns,
   rowKey,
   rowSelection,
@@ -149,6 +158,13 @@ function GenericTable<T extends object>({
       rowSelection={rowSelection}
       scroll={{
         x: tableWidth,
+      }}
+      pagination={{
+        current: page,
+        pageSize: limit,
+        total,
+        showSizeChanger: true,
+        onChange: onPageChange,
       }}
     />
   );

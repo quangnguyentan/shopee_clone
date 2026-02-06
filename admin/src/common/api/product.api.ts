@@ -1,6 +1,6 @@
 import type {
   CreateProductDto,
-  ProductFullWithVariantDto,
+  CreateProductWithVariantDto,
   UpdateProductDto,
 } from "@/pages/products/types";
 import { baseApi, type PaginatedResponse } from "../config/baseApi";
@@ -35,17 +35,19 @@ export const productApi = baseApi
         }),
         invalidatesTags: ["Product"],
       }),
-      createFullProduct: builder.mutation<Product, ProductFullWithVariantDto>({
-        query: (body) => ({
-          url: `/products/seller/full`,
-          method: "POST",
-          data: body,
-        }),
-        invalidatesTags: ["Product"],
-      }),
+      createFullProduct: builder.mutation<Product, CreateProductWithVariantDto>(
+        {
+          query: (body) => ({
+            url: `/products/seller/full`,
+            method: "POST",
+            data: body,
+          }),
+          invalidatesTags: ["Product"],
+        },
+      ),
       updateFullProduct: builder.mutation<
         Product,
-        { id: number; body: ProductFullWithVariantDto }
+        { id: number; body: CreateProductWithVariantDto }
       >({
         query: ({ id, body }) => ({
           url: `/products/seller/${id}/full`,

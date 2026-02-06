@@ -12,5 +12,5 @@ export const productsMock: Product[] = Array.from({ length: 400 }).map(
     status: "ACTIVE",
     variants: [],
     created_at: new Date().toISOString(),
-  })
+  }),
 );

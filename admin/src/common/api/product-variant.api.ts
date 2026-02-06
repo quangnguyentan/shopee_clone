@@ -10,12 +10,17 @@ export const productVariantApi = baseApi
     endpoints: (builder) => ({
       getAllProductVariants: builder.query<
         PaginatedResponse<ProductVariant>,
-        void
+        { page?: number; limit?: number } | void
       >({
-        query: () => ({
-          url: `/product-variants/`,
-          method: "GET",
-        }),
+        query: (arg) => {
+          const page = arg?.page ?? 1;
+          const limit = arg?.limit ?? 10;
+          return {
+            url: `/product-variants/`,
+            method: "GET",
+            params: { page, limit },
+          };
+        },
         providesTags: ["ProductVariant"],
       }),
       getProductVariantById: builder.query<ProductVariant, { id: A }>({

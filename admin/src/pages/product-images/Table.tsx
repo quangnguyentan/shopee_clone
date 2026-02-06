@@ -7,8 +7,18 @@ import NProgress from "@/common/utils/nprogress";
 import type { ProductImage } from "@/common/types/product-image.type";
 
 export const Table = () => {
-  const { columns, data, isLoading, isFetching, toolbarActions, rowSelection } =
-    useTableData();
+  const {
+    columns,
+    data,
+    total,
+    page,
+    limit,
+    onPageChange,
+    isLoading,
+    isFetching,
+    toolbarActions,
+    rowSelection,
+  } = useTableData();
   const showLoading = isLoading || isFetching;
   useEffect(() => {
     if (showLoading) {
@@ -43,6 +53,10 @@ export const Table = () => {
           rowKey="id"
           data={data}
           columns={columns as A}
+          total={total}
+          page={page}
+          limit={limit}
+          onPageChange={onPageChange}
           rowSelection={rowSelection}
         />
       </Spin>
