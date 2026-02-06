@@ -67,7 +67,13 @@ export class ShopService extends BaseService<Shop> {
       throw new ForbiddenException('No permission');
     }
 
-    return this.updateById(shopId, dto);
+    if (dto.user_id) {
+      shop.user = { id: dto.user_id } as any;
+      delete (dto as any).user_id;
+    }
+
+    Object.assign(shop, dto);
+    return this.repo.save(shop);
   }
 
   async deleteShop(shopId: number, userId: number) {
@@ -83,5 +89,18 @@ export class ShopService extends BaseService<Shop> {
     }
 
     return this.deleteById(shopId);
+  }
+
+  async getShopeeMallActive(limit = 16) {
+    return this.repo.find({
+      where: {
+        is_mall: true,
+        is_active: true,
+      },
+      order: {
+        created_at: 'DESC',
+      },
+      take: limit,
+    });
   }
 }

@@ -9,7 +9,11 @@ import type { ProductVariant } from "@/common/types/product-variant.type";
 export const Table = () => {
   const {
     columns,
-    products,
+    data,
+    total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,
@@ -47,8 +51,12 @@ export const Table = () => {
       <Spin spinning={isFetching}>
         <GenericTable<ProductVariant>
           rowKey="id"
-          data={products}
+          data={data}
           columns={columns as A}
+          total={total}
+          page={page}
+          limit={limit}
+          onPageChange={onPageChange}
           rowSelection={rowSelection}
         />
       </Spin>

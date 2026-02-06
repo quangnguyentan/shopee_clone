@@ -1,7 +1,9 @@
+import type { Shop } from "./shop.type";
+
 type Role = "buyer" | "seller" | "admin";
 
 export interface User {
-  id: number;
+  id: A;
 
   email: string;
 
@@ -19,7 +21,7 @@ export interface User {
 
   two_factor_secret: string;
 
-  shop: [];
+  shop: Shop;
 
   orders: [];
 

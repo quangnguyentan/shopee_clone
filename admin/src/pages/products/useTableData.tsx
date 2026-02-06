@@ -18,10 +18,16 @@ type ToolbarAction = {
 
 const useTableData = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const navigate = useNavigate();
+  const onPageChange = (p: number, l: number) => {
+    setPage(p);
+    setLimit(l);
+  };
 
   const { data: productsData, isLoading, isFetching } = useGetAllProductQuery();
-  const products = productsData?.items ?? [];
+  const data = productsData?.items ?? [];
   const total = productsData?.total ?? 0;
 
   const hasSelection = selectedRowKeys.length > 0;
@@ -156,8 +162,11 @@ const useTableData = () => {
 
   return {
     columns,
-    products,
+    data,
     total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,

@@ -31,6 +31,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ProductVariantAttributeModule } from './product-variant-attributes/product-variant-attributes.module';
 import { CategoryAttributeModule } from './category-attributes/category-attributes.module';
 import { CategoryAttributeValueModule } from './category-attribute-values/category-attribute-values.module';
+import { SearchLogModule } from './search-log/search-log.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -91,6 +92,7 @@ import { CategoryAttributeValueModule } from './category-attribute-values/catego
     CategoryAttributeModule,
     CategoryAttributeValueModule,
     ProductVariantAttributeModule,
+    SearchLogModule,
   ],
   controllers: [AppController],
   providers: [AppService],

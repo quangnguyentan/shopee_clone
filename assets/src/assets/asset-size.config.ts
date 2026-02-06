@@ -9,4 +9,5 @@ export const ASSET_SIZE_CONFIG: Record<
   [AssetType.CATEGORY]: { width: 400, height: 400 },
   [AssetType.PRODUCT]: { width: 320, height: 320 },
   [AssetType.PRODUCT_DESCRIPTION]: { width: 320, height: 320 },
+  [AssetType.FLASH_SALE]: { width: 320, height: 320 },
 };

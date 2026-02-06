@@ -10,11 +10,18 @@ const useTableData = () => {
   const { attributeId } = useParams();
   const navigate = useNavigate();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const onPageChange = (p: number, l: number) => {
+    setPage(p);
+    setLimit(l);
+  };
   const { data, isLoading, isFetching } =
     useGetCategoryAttributeValueByAttributeIdQuery({
       attributeId: Number(attributeId),
     });
+  const total = data?.length ?? 0;
+
   const canEdit = selectedRowKeys.length === 1;
   const handleEdit = useCallback(() => {
     if (selectedRowKeys.length !== 1) return;
@@ -24,8 +31,6 @@ const useTableData = () => {
       `/category-attributes/${attributeId}/values/${attributeValueId}/edit`,
     );
   }, [selectedRowKeys, navigate, attributeId]);
-
-  const items = data ?? [];
 
   const columns = useMemo(
     () => [
@@ -71,11 +76,16 @@ const useTableData = () => {
 
   return {
     columns,
-    items,
+    data,
+    total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
-    rowSelection,
     toolbarActions,
+    rowSelection,
+    selectedRowKeys,
   };
 };
 

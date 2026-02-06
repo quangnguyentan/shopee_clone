@@ -12,9 +12,11 @@ import top_label from "@/src/assest/top_label.png";
 import { IoIosArrowForward } from "@/src/components/shared/Icon";
 
 import Image from "next/image";
+import { useGetTopSearchProductsTodayQuery } from "@/src/common/api/product.api";
+import { formatSold } from "@/src/common/helper/formatSold";
 
 const TopSearch = () => {
-  const data = Array.from({ length: 120 });
+  const { data = [] } = useGetTopSearchProductsTodayQuery();
 
   return (
     <div className="flex flex-col gap-2">
@@ -39,44 +41,39 @@ const TopSearch = () => {
           className="w-full"
         >
           <CarouselContent>
-            {data.map((_, index) => (
-              <CarouselItem key={index} className="basis-1/6 !p-0">
-                <div className="grid grid-rows-1 h-full">
-                  {[0].map((row) => (
-                    <Card
-                      key={row}
-                      className="border-none p-0 shadow-none h-72"
-                    >
-                      <CardContent
-                        className="flex items-center justify-center h-full p-0 w-full flex-col gap-4 hover:shadow-lg cursor-pointer"
-                        onClick={() => {}}
-                      >
-                        <div className="w-[90%] h-44 relative">
-                          <Image
-                            draggable={false}
-                            priority
-                            src={product_1}
-                            alt="product_1"
-                            className="w-full h-full object-cover"
-                          />
-                          <div>
-                            <Image
-                              src={top_label}
-                              className="w-[32px] h-[40px] object-cover absolute top-0 left-0"
-                              alt="top_label"
-                            />
-                          </div>
-                          <div className="absolute bottom-0 bg-black-shadow w-full text-center text-sm py-1">
-                            <span className="text-white">Bán 83k+ / tháng</span>
-                          </div>
-                        </div>
-                        <span className="text-start w-full px-2 text-lg">
-                          Áo thun
+            {data.map((item) => (
+              <CarouselItem key={item.id} className="basis-1/6 !p-0">
+                <Card className="border-none p-0 shadow-none h-72">
+                  <CardContent
+                    className="flex items-center justify-center h-full p-0 w-full flex-col gap-4 hover:shadow-lg cursor-pointer"
+                    onClick={() => {}}
+                  >
+                    <div className="w-[90%] h-44 relative">
+                      <Image
+                        draggable={false}
+                        src={product_1}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+
+                      <Image
+                        src={top_label}
+                        className="w-[32px] h-[40px] object-cover absolute top-0 left-0"
+                        alt="top_label"
+                      />
+
+                      <div className="absolute bottom-0 bg-black-shadow w-full text-center text-sm py-1">
+                        <span className="text-white">
+                          Đã bán {formatSold(item.sold_count)}
                         </span>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      </div>
+                    </div>
+
+                    <span className="text-start w-full px-2 text-lg line-clamp-2">
+                      {item.name}
+                    </span>
+                  </CardContent>
+                </Card>
               </CarouselItem>
             ))}
           </CarouselContent>

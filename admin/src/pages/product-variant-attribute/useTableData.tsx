@@ -9,11 +9,20 @@ import { useNavigate } from "react-router-dom";
 
 const useTableData = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const onPageChange = (p: number, l: number) => {
+    setPage(p);
+    setLimit(l);
+  };
   const navigate = useNavigate();
-  const { data, isLoading, isFetching } =
-    useGetAllProductVariantAttributesQuery();
-  const productsVariantAttribute = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const {
+    data: productVariantAttributes,
+    isLoading,
+    isFetching,
+  } = useGetAllProductVariantAttributesQuery();
+  const data = productVariantAttributes?.items ?? [];
+  const total = productVariantAttributes?.total ?? 0;
 
   const hasSelection = selectedRowKeys.length > 0;
 
@@ -109,8 +118,11 @@ const useTableData = () => {
 
   return {
     columns,
-    productsVariantAttribute,
+    data,
     total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,

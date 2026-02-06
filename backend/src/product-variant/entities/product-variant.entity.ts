@@ -25,9 +25,6 @@ export class ProductVariant extends BaseEntity {
   @Column()
   stock: number;
 
-  @OneToMany(() => ProductVariantAttribute, (attr) => attr.variant, {
-    cascade: true,
-    eager: true,
-  })
+  @OneToMany(() => ProductVariantAttribute, (attr) => attr.variant)
   attributes: ProductVariantAttribute[];
 }

@@ -9,7 +9,11 @@ import type { CategoryAttribute } from "@/common/types/category-attribute.type";
 export const Table = () => {
   const {
     columns,
-    categoryAttribute,
+    data,
+    total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,
@@ -47,8 +51,12 @@ export const Table = () => {
       <Spin spinning={isFetching}>
         <GenericTable<CategoryAttribute>
           rowKey="id"
-          data={categoryAttribute}
+          data={data ?? []}
           columns={columns as A}
+          total={total}
+          page={page}
+          limit={limit}
+          onPageChange={onPageChange}
           rowSelection={rowSelection}
         />
       </Spin>

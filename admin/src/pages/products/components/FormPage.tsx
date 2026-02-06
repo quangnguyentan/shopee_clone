@@ -127,42 +127,46 @@ const FormPage = () => {
       }
 
       let descriptionHtml = values.description;
-
       if (!isEdit || values.description !== product?.description) {
         descriptionHtml = await uploadDescription(values.description);
       }
+
       const basePayload = {
-        shop_id: values.shop_id,
-        category_id: values.category_id,
+        shop_id: Number(values.shop_id),
+        category_id: Number(values.category_id),
         name: values.name,
         description: descriptionHtml,
         status: values.status,
       };
+
       let productId: number;
+
       if (values.has_variants) {
-        if (!values.variants || values.variants.length === 0) {
+        if (!values.attributes?.length) {
+          message.error("Please create product attributes");
+          return;
+        }
+        if (!values.variants?.length) {
           message.error("Please create at least one variant");
           return;
         }
       }
-      const variants = values?.variants ?? [];
+
+      const attributes = values.has_variants ? (values.attributes ?? []) : [];
 
       const normalizedVariants = values.has_variants
-        ? variants?.map((v) => ({
+        ? (values.variants ?? []).map((v) => ({
             price: Number(v.price),
             stock: Number(v.stock),
-            attributes: Array.isArray(v.attributes)
-              ? v.attributes.map((a) => ({
-                  attribute_name: a.attribute_name,
-                  value: a.value,
-                }))
-              : [],
+            attributes: v.attributes ?? [],
           }))
         : [];
+
       if (!isEdit) {
-        if (values?.has_variants) {
+        if (values.has_variants) {
           const created = await createFullProduct({
             ...basePayload,
+            attributes,
             variants: normalizedVariants,
           }).unwrap();
 
@@ -181,17 +185,19 @@ const FormPage = () => {
 
       if (isEdit && product) {
         productId = product.id;
+
         if (values.has_variants) {
           await updateFullProduct({
-            id: Number(productId),
+            id: productId,
             body: {
               ...basePayload,
+              attributes,
               variants: normalizedVariants,
             },
           }).unwrap();
         } else {
           await updateProduct({
-            id: Number(productId),
+            id: productId,
             body: {
               ...basePayload,
               price_min: Number(values.price_min),
@@ -205,20 +211,16 @@ const FormPage = () => {
       for (const img of images) {
         if (img.url && !img.file) continue;
 
-        if (img.file) {
-          const results = await uploadAsset({
-            files: [img.file],
-            type: "products",
-          }).unwrap();
+        const results = await uploadAsset({
+          files: [img.file!],
+          type: "products",
+        }).unwrap();
 
-          const uploaded = results[0];
-
-          await createProductImage({
-            product_id: productId!,
-            url: uploaded.images.original,
-            is_primary: img.isPrimary,
-          }).unwrap();
-        }
+        await createProductImage({
+          product_id: productId!,
+          url: results[0].images.original,
+          is_primary: img.isPrimary,
+        }).unwrap();
       }
 
       message.success(isEdit ? "Updated successfully" : "Created successfully");

@@ -49,13 +49,16 @@ const FormPage = () => {
     { skip: !isEdit },
   );
 
-  const { data: users } = useGetAllUsersQuery();
-
+  const { data: users, isLoading: isUsersLoading } = useGetAllUsersQuery();
   const [createShop, { isLoading: isCreating }] = useCreateShopMutation();
   const [updateShop, { isLoading: isUpdating }] = useUpdateShopMutation();
 
   const [uploadSingleAsset] = useUploadSingleAssetMutation();
   const [uploadDescriptionImages] = useUploadDescriptionImagesMutation();
+
+  // const filterSeller = useMemo(() => {
+  //   return users?.items?.filter((u) => u.role === "seller");
+  // }, [users]);
 
   useEffect(() => {
     if (isEdit && shop) {
@@ -77,7 +80,7 @@ const FormPage = () => {
           : [],
       });
 
-      editorRef.current?.setHTML(shop.description);
+      editorRef.current?.setHTML(shop?.description);
     }
   }, [isEdit, shop]);
 
@@ -125,7 +128,7 @@ const FormPage = () => {
         is_active: values.is_active,
         rating: values.rating,
         logo,
-        user_id: values.user_id,
+        user_id: Number(values.user_id),
       };
 
       if (isEdit) {
@@ -147,7 +150,7 @@ const FormPage = () => {
     }
   };
 
-  if (isLoading) return <Loading />;
+  if (isLoading || isUsersLoading) return <Loading />;
 
   return (
     <Form

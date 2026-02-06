@@ -27,6 +27,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       role: payload.role,
       sessionId: payload.sessionId,
       scope: payload.scope,
+      admin_level: payload.admin_level ?? 0,
+      status: payload.status ?? 'ACTIVE',
     };
   }
 }

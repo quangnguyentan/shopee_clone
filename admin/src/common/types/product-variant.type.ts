@@ -1,16 +1,37 @@
-import type { Product } from "./product.type";
-
 export interface ProductVariant {
-  id: A;
-  product_id: A;
-  product: Product;
+  id: number;
   sku: string;
   price: number;
   stock: number;
 
-  attributes: {
-    attribute_id: A;
+  product: {
+    id: number;
     name: string;
-    value: string;
+    category_id?: A;
+  };
+
+  attributes: {
+    attribute: {
+      id: number;
+      name: string;
+    };
+    value?: {
+      id: number;
+      value: string;
+    } | null;
+    custom_value?: string | null;
+  }[];
+}
+
+export interface ProductVariantFormValues {
+  product_id: number;
+  variants: {
+    sku: string;
+    price: number;
+    stock: number;
+    attributes: {
+      name: string;
+      value: string;
+    }[];
   }[];
 }

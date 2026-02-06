@@ -3,7 +3,8 @@ export type AssetType =
   | "avatars"
   | "shops"
   | "categories"
-  | "product-description";
+  | "product-description"
+  | "flash-sales";
 
 export type DescriptionImageResult = {
   items: { url: string }[];

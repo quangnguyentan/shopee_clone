@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ShopService } from './shop.service';
 import { CreateShopDto } from './dto/create-shop.dto';
@@ -21,6 +22,11 @@ import { AuthRole } from '@/common/decorators/auth-role.decorator';
 export class ShopController extends BaseController<Shop> {
   constructor(protected readonly service: ShopService) {
     super(service);
+  }
+
+  @Get('mall')
+  getShopeeMallProducts(@Query('limit') limit = 16) {
+    return this.service.getShopeeMallActive(Number(limit));
   }
 
   @Get()

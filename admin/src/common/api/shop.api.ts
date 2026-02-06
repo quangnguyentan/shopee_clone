@@ -33,7 +33,7 @@ export const shopApi = baseApi
       updateShop: builder.mutation<Shop, { id: A; body: Partial<Shop> }>({
         query: ({ id, body }) => ({
           url: `/shops/${id}`,
-          method: "PUT",
+          method: "PATCH",
           data: body,
         }),
         invalidatesTags: ["Shop"],
