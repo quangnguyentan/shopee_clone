@@ -1,19 +1,21 @@
 import Image from "next/image";
-import React from "react";
+import React, { useMemo } from "react";
 import { Product } from "../types/product.type";
 import voucher from "@/src/assest/voucher.png";
-import product_test from "@/src/assest/product_test.1.webp";
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
+  const filterPrimaryImage = useMemo(() => {
+    return product?.images?.filter((i) => i.is_primary);
+  }, [product]);
   return (
     <div className="flex flex-col cursor-pointer hover:shadow-lg transition bg-white hover:-translate-y-[1px] h-[328px] rounded-md">
       <div className="relative w-full h-2/3">
         <Image
-          src={product_test}
+          src={filterPrimaryImage[0]?.original ?? ""}
           alt={product.name}
           fill
           className="object-cover w-full h-full rounded-md"
@@ -29,10 +31,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       </div>
 
       <div className="px-2 py-2 flex flex-col gap-1">
-        <span className="text-sm line-clamp-2">
-          Sét 3 5 Đôi Tất Cổ Cao Nữ 5 Họa Tiết, Vớ Cao Cổ Chất Liệu Cotton Phong
-          Cách Hàn Quốc
-        </span>
+        <span className="text-sm line-clamp-2">{product?.name}</span>
         <div className="flex items-center justify-center gap-1">
           <div className="rounded-md border border-red-rgb flex-1 flex items-center justify-center">
             <span className="text-red-rgb text-[10px]">Rẻ vô địch</span>
@@ -45,10 +44,9 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </div>
         <div className="flex justify-between">
           <div className="flex flex-col">
-            <span className="text-red-500 font-medium text-base">
-              {product.price_min.toLocaleString()}₫
+            <span className="text-red-500 font-medium text-base line-clamp-1">
+              {product.price_max.toLocaleString()}₫
             </span>
-            <span className="text-xs">Đã bán 10k+</span>
           </div>
           <span className="text-xs">Đã bán 10k+</span>
         </div>

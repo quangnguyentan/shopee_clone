@@ -32,6 +32,9 @@ export class Shop extends BaseEntity {
   @Column({ default: true })
   is_active: boolean;
 
+  @Column({ default: false })
+  is_mall: boolean;
+
   @OneToMany(() => Product, (product) => product.shop)
   products: Product[];
 }

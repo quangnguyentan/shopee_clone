@@ -7,6 +7,7 @@ import {
   ProductOutlined,
   ProfileOutlined,
   ShopOutlined,
+  ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 
@@ -47,7 +48,12 @@ export const NAV_ITEMS = [
     label: "Products",
     url: "/products",
   },
-
+  {
+    key: "/flash-sales",
+    icon: <ThunderboltOutlined />,
+    label: "Flash Sales",
+    url: "/flash-sales",
+  },
   {
     key: "/product-images",
     icon: <FileImageOutlined />,

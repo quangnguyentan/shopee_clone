@@ -1,3 +1,4 @@
+"use client";
 import Categories from "@/src/features/home/components/Categories";
 import FeatureMenu from "@/src/features/home/components/FeatureMenu";
 import FlashSale from "@/src/features/home/components/FlashSale";

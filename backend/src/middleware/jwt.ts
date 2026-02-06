@@ -14,6 +14,8 @@ export const generateAccessToken = (
       role: user.role,
       sessionId,
       scope,
+      admin_level: user.admin_level ?? 0,
+      status: user.status ?? 'ACTIVE',
     },
     process.env.JWT_ACCESS_SECRET!,
     {

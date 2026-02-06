@@ -23,6 +23,7 @@ import { AVATAR_DEFAULT } from '@/common/constant/asset.constant';
 import { Cron } from '@nestjs/schedule';
 import * as nodemailer from 'nodemailer';
 import { generateOTP } from '@/common/utils/generateOTP';
+import { CreateAdminDto } from './dto/create-admin.dto';
 
 const QR_EXPIRE_MS = 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
@@ -206,19 +207,21 @@ export class AuthService {
       },
     });
 
-    if (!user) {
+    if (!user && profile.email) {
       const emailUser = await this.userRepo.findOne({
         where: { email: profile.email },
       });
 
       if (emailUser) {
-        if (emailUser.auth_provider === 'local' && emailUser.email_verified) {
-          emailUser.auth_provider = profile.provider;
-          emailUser.social_id = profile.providerId;
-          user = await this.userRepo.save(emailUser);
-        } else {
-          throw new AppException(AUTH_ERROR.ACCOUNT_ALREADY_EXISTS);
+        emailUser.auth_provider = profile.provider;
+        emailUser.social_id = profile.providerId;
+        emailUser.email_verified = true;
+
+        if (!emailUser.role) {
+          emailUser.role = scope;
         }
+
+        user = await this.userRepo.save(emailUser);
       }
     }
     if (!user) {
@@ -265,6 +268,15 @@ export class AuthService {
     }
     if (user.auth_provider === 'local' && !user.email_verified) {
       throw new AppException(AUTH_ERROR.EMAIL_NOT_VERIFIED, identifier);
+    }
+    if (scope === 'admin' && user.admin_level !== 2) {
+      if (user.status !== 'ACTIVE') {
+        throw new AppException(AUTH_ERROR.ADMIN_NOT_APPROVED);
+      }
+
+      if (!user.two_factor_enabled) {
+        return { require2FASetup: true };
+      }
     }
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) throw new AppException(AUTH_ERROR.INVALID_PASSWORD);
@@ -603,5 +615,63 @@ export class AuthService {
     });
 
     return { message: 'Password changed successfully' };
+  }
+  async createAdmin(dto: CreateAdminDto, creator: User) {
+    if (creator.admin_level !== 2) {
+      throw new AppException(AUTH_ERROR.UNAUTHORIZED);
+    }
+
+    const exists = await this.userRepo.findOne({
+      where: { email: dto.email },
+    });
+    if (exists) throw new AppException(AUTH_ERROR.USER_ALREADY_EXISTS);
+
+    const admin = this.userRepo.create({
+      email: dto.email,
+      password: await bcrypt.hash(dto.password, 10),
+      role: 'admin',
+      admin_level: 1,
+      status: 'PENDING',
+      email_verified: true,
+    });
+
+    await this.userRepo.save(admin);
+
+    return {
+      message: 'Admin created. Waiting for approval.',
+    };
+  }
+
+  async approveAdmin(adminId: number, approver: User) {
+    if (approver.admin_level !== 2) {
+      throw new AppException(AUTH_ERROR.UNAUTHORIZED);
+    }
+
+    const admin = await this.userRepo.findOneBy({ id: adminId });
+    if (!admin || admin.role !== 'admin') {
+      throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+    }
+
+    admin.status = 'ACTIVE';
+    await this.userRepo.save(admin);
+
+    return { message: 'Admin approved' };
+  }
+
+  async suspendAdmin(adminId: number, approver: User) {
+    if (approver.admin_level !== 2) {
+      throw new AppException(AUTH_ERROR.UNAUTHORIZED);
+    }
+
+    const admin = await this.userRepo.findOneBy({ id: adminId });
+    if (!admin) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
+
+    admin.status = 'SUSPENDED';
+    await this.userRepo.save(admin);
+
+    // revoke toàn bộ session
+    await this.sessionsService.revokeAll(admin.id);
+
+    return { message: 'Admin suspended' };
   }
 }

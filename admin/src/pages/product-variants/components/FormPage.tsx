@@ -4,13 +4,13 @@ import { useEffect } from "react";
 import Loading from "@/components/Loading";
 import { useGetProductVariantByIdQuery } from "@/common/api/product-variant.api";
 import { useGetAllProductQuery } from "@/common/api/product.api";
-import type { ProductVariant } from "@/common/types/product-variant.type";
+import type { ProductVariantFormValues } from "@/common/types/product-variant.type";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 
 const FormPage = () => {
   const { id } = useParams();
   const isEdit = !!id;
-  const [form] = Form.useForm<ProductVariant>();
+  const [form] = Form.useForm<ProductVariantFormValues>();
   const navigate = useNavigate();
 
   const { data: productVariant, isLoading: isProductVariantLoading } =
@@ -23,12 +23,12 @@ const FormPage = () => {
     if (isEdit && productVariant) {
       form.setFieldsValue({
         ...productVariant,
-        product_id: productVariant.product_id,
+        product_id: productVariant.product.id,
       });
     }
   }, [isEdit, productVariant]);
 
-  const onFinish = (values: ProductVariant) => {
+  const onFinish = (values: ProductVariantFormValues) => {
     const payload = {
       ...values,
     };

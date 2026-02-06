@@ -20,14 +20,24 @@ export class ProductVariantService extends BaseService<ProductVariant> {
 
   async findAll(query?: PaginationDto) {
     return super.findAll(query, {
-      relations: ['product', 'attributes', 'attributes.variant'],
+      relations: [
+        'product',
+        'attributes',
+        'attributes.attribute',
+        'attributes.value',
+      ],
     });
   }
 
   async findOneById(id: number) {
     const variant = await this.repo.findOne({
       where: { id },
-      relations: ['product', 'attributes', 'attributes.variant'],
+      relations: [
+        'product',
+        'attributes',
+        'attributes.attribute',
+        'attributes.value',
+      ],
     });
     if (!variant) {
       throw new NotFoundException('Product variant not found');

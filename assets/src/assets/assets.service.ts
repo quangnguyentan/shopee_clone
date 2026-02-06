@@ -26,6 +26,8 @@ export class AssetService {
         return 'uploads/shops';
       case AssetType.CATEGORY:
         return 'uploads/categories';
+      case AssetType.FLASH_SALE:
+        return 'uploads/flash_sales';
       default:
         throw new Error('Invalid asset type');
     }

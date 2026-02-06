@@ -10,14 +10,14 @@ import {
 import { Type } from 'class-transformer';
 import { ProductStatus } from './create-product.dto';
 
-class VariantAttributeDto {
+class ProductAttributeMatrixDto {
   @IsString()
   @IsNotEmpty()
-  attribute_name: string; // Size, Color
+  name: string; // Color, Size
 
-  @IsString()
-  @IsNotEmpty()
-  value: string; // S, M, Red, ...
+  @IsArray()
+  @IsString({ each: true })
+  values: string[]; // ['Red', 'Blue']
 }
 
 class VariantDto {
@@ -32,11 +32,6 @@ class VariantDto {
   @Type(() => Number)
   @IsNumber()
   stock: number;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => VariantAttributeDto)
-  attributes: VariantAttributeDto[];
 }
 
 export class CreateProductWithVariantDto {
@@ -57,6 +52,11 @@ export class CreateProductWithVariantDto {
 
   @IsEnum(ProductStatus)
   status: ProductStatus;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductAttributeMatrixDto)
+  attributes: ProductAttributeMatrixDto[];
 
   @IsArray()
   @ValidateNested({ each: true })

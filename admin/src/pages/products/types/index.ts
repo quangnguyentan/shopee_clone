@@ -12,25 +12,35 @@ export interface CreateProductDto {
   status: ProductStatus;
 }
 
-export interface ProductFullWithVariantDto {
+export type UpdateProductDto = Partial<CreateProductDto>;
+
+export type AttributeMatrix = {
+  name: string; // Color, Size
+  values: string[]; // ['Red', 'Blue']
+};
+
+export type VariantAttribute = {
+  attribute_name: string;
+  value: string;
+};
+
+export type Variant = {
+  sku?: string;
+  price: number;
+  stock: number;
+  attributes: VariantAttribute[];
+};
+
+export interface CreateProductWithVariantDto {
   shop_id: number;
   category_id: number;
   name: string;
   description: string;
   status: ProductStatus;
-  category_ids?: number[];
-  variants: {
-    sku?: string;
-    price: number;
-    stock: number;
-    attributes: {
-      attribute_name: string;
-      value: string;
-    }[];
-  }[];
-}
 
-export type UpdateProductDto = Partial<CreateProductDto>;
+  attributes: AttributeMatrix[];
+  variants: Variant[];
+}
 
 export interface CreateProductImageDto {
   product_id: number;
@@ -42,23 +52,6 @@ export type UpdateProductImageDto = Partial<
   Pick<CreateProductImageDto, "is_primary">
 >;
 
-export type Attribute = {
-  name: string;
-  values: string[];
-};
-
-export type VariantAttribute = {
-  attribute_name: string;
-  value: string;
-};
-
-export type Variant = {
-  sku?: string;
-  price?: number;
-  stock?: number;
-  attributes: VariantAttribute[];
-};
-
 export type ProductFormValues = {
   name: string;
   shop_id: number;
@@ -66,27 +59,15 @@ export type ProductFormValues = {
   description: string;
   status: ProductStatus;
 
-  // optional
-  category_ids?: number[];
   has_variants?: boolean;
 
-  // simple product
   price_min?: number;
   price_max?: number;
   stock?: number;
 
-  // variants product
-  variants?: {
-    sku?: string;
-    price?: number;
-    stock?: number;
-    attributes: {
-      attribute_name: string;
-      value: string;
-    }[];
-  }[];
+  attributes?: AttributeMatrix[];
+  variants?: Variant[];
 
-  // UI only
   images: UploadFileWithExtra[];
 };
 

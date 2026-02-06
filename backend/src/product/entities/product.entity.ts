@@ -50,6 +50,21 @@ export class Product extends BaseEntity {
   @Column({ default: 'active' })
   status: string;
 
+  @Column({ default: 0 })
+  sold_count: number; // bán được bao nhiêu
+
+  @Column({ default: 0 })
+  view_count: number; // được xem bao nhiêu
+
+  @Column({ default: 0 })
+  rating_avg: number; // điểm trung bình
+
+  @Column({ default: 0 })
+  rating_count: number; // số lượt đánh giá
+
+  @Column({ default: false })
+  is_featured: boolean;
+
   @OneToMany(() => ProductVariant, (v) => v.product)
   variants: ProductVariant[];
 

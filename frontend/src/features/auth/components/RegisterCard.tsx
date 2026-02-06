@@ -22,8 +22,11 @@ import { useNavigate } from "@/src/common/constants/navigate.constant";
 import { useState, useTransition } from "react";
 import { DialogBox } from "@/src/components/shared/Dialog";
 import { toast } from "sonner";
-import { Loading } from "@/src/components/shared/Loading";
 import { useRegisterMutation } from "@/src/common/api/auth.api";
+import {
+  loginWithFacebook,
+  loginWithGoogle,
+} from "@/src/common/helper/loginRedirect";
 
 const RegisterCard = () => {
   const { push } = useNavigate();
@@ -151,19 +154,22 @@ const RegisterCard = () => {
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex items-center justify-center gap-2 w-full">
                 <IconButton
+                  type="button"
                   variant="outline"
-                  className="w-full"
-                  startIcon={<FaFacebook size={22} color="#1877F2" />}
+                  className="w-full rounded-sm font-normal"
+                  startIcon={<FaFacebook color="#1877F2" size={22} />}
+                  onClick={loginWithFacebook}
                 >
                   {i18n.get("pages.auth.with.facebook.title")}
                 </IconButton>
-
                 <IconButton
+                  type="button"
+                  className="w-full rounded-sm font-normal"
                   variant="outline"
-                  className="w-full"
                   startIcon={<FcGoogle size={22} />}
+                  onClick={loginWithGoogle}
                 >
                   {i18n.get("pages.auth.with.google.title")}
                 </IconButton>

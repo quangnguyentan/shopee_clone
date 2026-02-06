@@ -22,7 +22,6 @@ const Products = lazy(() => import("@/pages/products"));
 const Shops = lazy(() => import("@/pages/shops"));
 const ProductVariants = lazy(() => import("@/pages/product-variants"));
 const ProductImages = lazy(() => import("@/pages/product-images"));
-const VariantOptions = lazy(() => import("@/pages/variant-options"));
 const ShopFormPage = lazy(() =>
   import("@/pages/shops/components").then((mod) => ({
     default: mod.ShopFormPage,
@@ -32,7 +31,19 @@ const ProductVariantAttribute = lazy(
   () => import("@/pages/product-variant-attribute"),
 );
 
-import { VariantOptionFormPage } from "./pages/variant-options/components";
+const FlashSales = lazy(() => import("@/pages/flash-sales"));
+const FlashSaleItems = lazy(() => import("@/pages/flash-sale-items"));
+const FlashSaleFormPage = lazy(() =>
+  import("@/pages/flash-sales/components").then((m) => ({
+    default: m.FlashSaleFormPage,
+  })),
+);
+const FlashSaleItemFormPage = lazy(() =>
+  import("@/pages/flash-sale-items/components").then((m) => ({
+    default: m.FlashSaleItemFormPage,
+  })),
+);
+
 import { ProductImageFormPage } from "./pages/product-images/components";
 import { ProductVariantFormPage } from "./pages/product-variants/components";
 import { UserFormPage } from "./pages/users/components";
@@ -230,30 +241,6 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: "variant-options",
-            element: (
-              <S>
-                <VariantOptions />
-              </S>
-            ),
-          },
-          {
-            path: "variant-options/create",
-            element: (
-              <S>
-                <VariantOptionFormPage />
-              </S>
-            ),
-          },
-          {
-            path: "variant-options/:id/edit",
-            element: (
-              <S>
-                <VariantOptionFormPage />
-              </S>
-            ),
-          },
-          {
             path: "productVariantAttributes",
             element: (
               <S>
@@ -322,6 +309,54 @@ export const router = createBrowserRouter([
             element: (
               <S>
                 <ProductVariantFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "flash-sales",
+            element: (
+              <S>
+                <FlashSales />
+              </S>
+            ),
+          },
+          {
+            path: "flash-sales/create",
+            element: (
+              <S>
+                <FlashSaleFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "flash-sales/:id/edit",
+            element: (
+              <S>
+                <FlashSaleFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "flash-sales/:flashSaleId/items",
+            element: (
+              <S>
+                <FlashSaleItems />
+              </S>
+            ),
+          },
+          {
+            path: "flash-sales/:flashSaleId/items/create",
+            element: (
+              <S>
+                <FlashSaleItemFormPage />
+              </S>
+            ),
+          },
+          {
+            path: "flash-sales/:flashSaleId/items/:itemId/edit",
+            element: (
+              <S>
+                <FlashSaleItemFormPage />
               </S>
             ),
           },

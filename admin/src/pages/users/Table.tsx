@@ -9,7 +9,11 @@ import type { User } from "@/common/types/user.type";
 export const Table = () => {
   const {
     columns,
-    users,
+    data,
+    total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,
@@ -47,8 +51,12 @@ export const Table = () => {
       <Spin spinning={isFetching}>
         <GenericTable<User>
           rowKey="id"
-          data={users}
+          data={data}
           columns={columns as A}
+          total={total}
+          page={page}
+          limit={limit}
+          onPageChange={onPageChange}
           rowSelection={rowSelection}
         />
       </Spin>

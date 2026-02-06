@@ -1,7 +1,11 @@
 import { Button, Card, Form, InputNumber, Select, Space } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useEffect, useRef } from "react";
-import type { Attribute, Variant, VariantAttribute } from "../types";
+import type {
+  AttributeMatrix as Attribute,
+  Variant,
+  VariantAttribute,
+} from "../types";
 import { buildKey, cartesian } from "../utils/helper";
 import { useGetCategoryAttributeByCategoryQuery } from "@/common/api/category-attribute.api";
 import ProductVariantSkeleton from "@/components/ProductVariantSkeleton";

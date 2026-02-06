@@ -15,11 +15,16 @@ type ToolbarAction = {
 
 const useTableData = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const onPageChange = (p: number, l: number) => {
+    setPage(p);
+    setLimit(l);
+  };
+  const { data: images, isLoading, isFetching } = useGetAllProductImagesQuery();
 
-  const { data, isLoading, isFetching } = useGetAllProductImagesQuery();
-
-  const images = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const data = images?.items ?? [];
+  const total = images?.total ?? 0;
 
   const hasSelection = selectedRowKeys.length > 0;
 
@@ -103,8 +108,11 @@ const useTableData = () => {
 
   return {
     columns,
-    data: images,
+    data,
     total,
+    page,
+    limit,
+    onPageChange,
     isLoading,
     isFetching,
     toolbarActions,

@@ -4,4 +4,5 @@ export enum AssetType {
   SHOP = 'shops',
   CATEGORY = 'categories',
   PRODUCT_DESCRIPTION = 'product-description',
+  FLASH_SALE = 'flash-sales',
 }
