@@ -25,6 +25,25 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Cloudinary image storage
+
+The asset service uploads images to Cloudinary. Configure
+`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in
+`.env.development.local` (never commit these credentials). Image responses use
+Cloudinary `secure_url` values rather than a localhost URL.
+
+To migrate existing local uploads and replace their database references, run
+from `apps/assets`:
+
+```powershell
+npm run migrate:local-assets
+```
+
+The migration reads `DATABASE_URL` from `apps/api/.env.development.local` and
+files from `apps/assets/uploads`. Missing local files are reported and their
+database references are left unchanged; restore or re-upload those images
+before rerunning the migration.
+
 ## Project setup
 
 ```bash

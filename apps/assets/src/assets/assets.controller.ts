@@ -38,10 +38,8 @@ export class AssetController {
       throw new BadRequestException('File is required');
     }
 
-    const filename = await this.assetService.saveResizedImage(files[0], type);
-
     return {
-      url: this.assetService.buildPublicUrl(type, filename),
+      url: await this.assetService.saveResizedImage(files[0], type),
     };
   }
 }

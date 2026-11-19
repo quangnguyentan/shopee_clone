@@ -31,6 +31,8 @@ export type Variant = {
   attributes: VariantAttribute[];
 };
 
+export type VariantInput = Pick<Variant, "price" | "stock">;
+
 export interface CreateProductWithVariantDto {
   shop_id: number;
   category_id: number;
@@ -39,7 +41,7 @@ export interface CreateProductWithVariantDto {
   status: ProductStatus;
 
   attributes: AttributeMatrix[];
-  variants: Variant[];
+  variants: VariantInput[];
 }
 
 export interface CreateProductImageDto {

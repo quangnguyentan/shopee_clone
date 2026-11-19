@@ -2,6 +2,7 @@ import Image from "next/image";
 import React, { useMemo } from "react";
 import { Product } from "../types/product.type";
 import voucher from "@/src/assest/voucher.png";
+import { getAssetUrl } from "@/src/lib/assets";
 
 interface ProductCardProps {
   product: Product;
@@ -15,7 +16,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
     <div className="flex flex-col cursor-pointer hover:shadow-lg transition bg-white hover:-translate-y-[1px] h-[328px] rounded-md">
       <div className="relative w-full h-2/3">
         <Image
-          src={filterPrimaryImage[0]?.original ?? ""}
+          src={getAssetUrl(filterPrimaryImage[0]?.original) ?? ""}
           alt={product.name}
           fill
           className="object-cover w-full h-full rounded-md"
