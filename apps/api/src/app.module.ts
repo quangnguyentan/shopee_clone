@@ -32,6 +32,7 @@ import { ProductVariantAttributeModule } from './product-variant-attributes/prod
 import { CategoryAttributeModule } from './category-attributes/category-attributes.module';
 import { CategoryAttributeValueModule } from './category-attribute-values/category-attribute-values.module';
 import { SearchLogModule } from './search-log/search-log.module';
+import { RecommendationModule } from './recommendation/recommendation.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -93,6 +94,7 @@ import { SearchLogModule } from './search-log/search-log.module';
     CategoryAttributeValueModule,
     ProductVariantAttributeModule,
     SearchLogModule,
+    RecommendationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

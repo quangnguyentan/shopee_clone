@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { SearchLogService } from './search-log.service';
 import { CreateSearchLogDto } from './dto/create-search-log.dto';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { OptionalAuth } from '@/common/decorators/optional-auth.decorator';
 
 @Controller('search-logs')
 export class SearchLogController {
@@ -18,9 +20,13 @@ export class SearchLogController {
    * Ghi log khi user search keyword
    * POST /search-logs
    */
+  @OptionalAuth()
   @Post()
-  create(@Body() dto: CreateSearchLogDto) {
-    return this.searchLogService.create(dto);
+  create(
+    @Body() dto: CreateSearchLogDto,
+    @CurrentUser() user?: { userId: number },
+  ) {
+    return this.searchLogService.create(dto, user?.userId);
   }
 
   /**

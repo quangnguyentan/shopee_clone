@@ -11,8 +11,11 @@ import {
   OneToMany,
   CreateDateColumn,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
+@Index('idx_products_category_id', ['category_id'])
+@Index('idx_products_shop_id', ['shop_id'])
 @Entity('products')
 export class Product extends BaseEntity {
   @Column()
