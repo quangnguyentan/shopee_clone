@@ -394,13 +394,18 @@ export class ProductService extends BaseService<Product> {
     });
   }
 
-  async searchProducts(keyword: string, query?: PaginationDto) {
+  async searchProducts(
+    keyword: string,
+    query?: PaginationDto,
+    userId?: number,
+  ) {
     const kw = keyword?.trim().toLowerCase();
 
     if (kw) {
       await this.repo.manager.insert('search_logs', {
         keyword: kw,
         product_id: null,
+        user_id: userId ?? null,
       });
     }
 

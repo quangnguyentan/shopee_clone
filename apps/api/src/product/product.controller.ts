@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  BadRequestException,
   Param,
   ParseIntPipe,
   Patch,
@@ -20,10 +21,16 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { AuthRole } from '@/common/decorators/auth-role.decorator';
 import { CreateProductWithVariantDto } from './dto/create-product-full.dto';
 import { PaginationDto } from '@/base/base.dto';
+import { OptionalAuth } from '@/common/decorators/optional-auth.decorator';
+import { RecommendationClient } from '@/recommendation/recommendation.client';
+import { RecommendationFilterDto } from '@/recommendation/dto/recommendation-filter.dto';
 
 @Controller('products')
 export class ProductController extends BaseController<Product> {
-  constructor(protected readonly service: ProductService) {
+  constructor(
+    protected readonly service: ProductService,
+    private readonly recommendations: RecommendationClient,
+  ) {
     super(service);
   }
 
@@ -58,8 +65,28 @@ export class ProductController extends BaseController<Product> {
     return this.service.findAllView();
   }
   @Get('buyer/:id')
-  viewProduct(@Param('id', ParseIntPipe) id: number) {
-    return this.service.viewProduct(id);
+  async viewProduct(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() filters: RecommendationFilterDto,
+  ) {
+    if (
+      filters.min_price !== undefined &&
+      filters.max_price !== undefined &&
+      filters.min_price > filters.max_price
+    ) {
+      throw new BadRequestException(
+        'min_price must be less than or equal to max_price',
+      );
+    }
+
+    const product = await this.service.viewProduct(id);
+    if (!product) return product;
+
+    const similar_products = await this.recommendations.getSimilarProducts(
+      id,
+      filters,
+    );
+    return { ...product, similar_products };
   }
 
   @AuthRole('admin')
@@ -89,9 +116,14 @@ export class ProductController extends BaseController<Product> {
   ) {
     return this.service.updateFullProduct(id, user.userId, dto);
   }
+  @OptionalAuth()
   @Get('search')
-  search(@Query('q') q: string, @Query() query: PaginationDto) {
-    return this.service.searchProducts(q, query);
+  search(
+    @Query('q') q: string,
+    @Query() query: PaginationDto,
+    @CurrentUser() user?: { userId: number },
+  ) {
+    return this.service.searchProducts(q, query, user?.userId);
   }
   @Get('search/suggest')
   getSearchSuggest() {

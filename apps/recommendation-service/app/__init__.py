@@ -1,0 +1,1 @@
+"""Shopee Clone recommendation service."""

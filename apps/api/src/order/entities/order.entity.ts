@@ -8,12 +8,17 @@ import {
   OneToMany,
   CreateDateColumn,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
+@Index('idx_orders_user_status_created', ['user_id', 'status', 'created_at'])
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
+
+  @Column({ name: 'user_id', type: 'bigint' })
+  user_id: number;
 
   @ManyToOne(() => User, (user) => user.orders)
   @JoinColumn({ name: 'user_id' })

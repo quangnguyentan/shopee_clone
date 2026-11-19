@@ -12,13 +12,14 @@ export class SearchLogService {
   ) {}
 
   // 🔥 Ghi log search keyword
-  async create(dto: CreateSearchLogDto) {
+  async create(dto: CreateSearchLogDto, userId?: number) {
     const keyword = dto.keyword?.trim().toLowerCase();
     if (!keyword) return;
 
     await this.repo.insert({
       keyword,
       product_id: null,
+      user_id: userId ?? null,
     });
 
     return { success: true };
