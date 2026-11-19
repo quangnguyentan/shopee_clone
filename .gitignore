@@ -27,3 +27,24 @@ yarn-error.log*
 .DS_Store
 .vscode/
 .idea/
+
+# ==========================================
+# PYTHON (Dành cho FastAPI Recommendation Service)
+# ==========================================
+# Môi trường ảo
+venv/
+.venv/
+env/
+
+# File biên dịch
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cache của pytest
+.pytest_cache/
+
+# Các file rác khác của Python
+*.egg-info/
+.coverage
+htmlcov/

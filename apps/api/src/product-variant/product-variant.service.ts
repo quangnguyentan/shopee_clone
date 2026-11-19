@@ -1,7 +1,7 @@
 // product-variant/product-variant.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { BaseService } from '@/base/base.service';
 import { ProductVariant } from './entities/product-variant.entity';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
@@ -12,8 +12,6 @@ export class ProductVariantService extends BaseService<ProductVariant> {
   constructor(
     @InjectRepository(ProductVariant)
     repo: Repository<ProductVariant>,
-
-    private readonly dataSource: DataSource,
   ) {
     super(repo);
   }

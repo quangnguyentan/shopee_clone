@@ -9,7 +9,7 @@ export interface Category {
 
   name: string;
 
-  imageUrl: string;
+  imageUrl: string | null;
 
   attributes: CategoryAttribute[];
 }

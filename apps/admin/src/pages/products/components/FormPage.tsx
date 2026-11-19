@@ -158,7 +158,6 @@ const FormPage = () => {
         ? (values.variants ?? []).map((v) => ({
             price: Number(v.price),
             stock: Number(v.stock),
-            attributes: v.attributes ?? [],
           }))
         : [];
 
