@@ -1,10 +1,22 @@
 import { getEnv } from "../common/config/env.client";
 
 export const getAssetUrl = (path?: string) => {
-  const { NEXT_PUBLIC_ASSETS_URL } = getEnv();
   if (!path) return undefined;
 
-  if (path.startsWith("http")) return path;
+  const assetBase = new URL(getEnv().NEXT_PUBLIC_ASSETS_URL);
+  if (path.startsWith("http")) {
+    const url = new URL(path);
+    const isLocalHost = (hostname: string) =>
+      hostname === "localhost" || hostname === "127.0.0.1";
 
-  return `${NEXT_PUBLIC_ASSETS_URL}${path}`;
+    if (isLocalHost(url.hostname) && isLocalHost(assetBase.hostname)) {
+      url.protocol = assetBase.protocol;
+      url.host = assetBase.host;
+      return url.toString();
+    }
+
+    return path;
+  }
+
+  return `${assetBase.origin}${path}`;
 };
