@@ -19,7 +19,7 @@ export class UserService extends BaseService<User> {
 
   async getMe(userId: number) {
     const user = await this.userRepo.findOne({
-      where: { id: userId },
+      where: { id: String(userId) },
       select: ['id', 'email', 'name', 'role', 'avatar'],
     });
 

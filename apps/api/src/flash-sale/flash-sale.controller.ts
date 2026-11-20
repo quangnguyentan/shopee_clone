@@ -13,6 +13,9 @@ import { CreateFlashSaleDto } from './dto/create-flash-sale.dto';
 import { UpdateFlashSaleDto } from './dto/update-flash-sale.dto';
 import { AddFlashSaleItemDto } from './dto/add-flash-sale.dto';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Flash Sales')
 @Controller('flash-sales')
 export class FlashSaleController {
   constructor(private readonly service: FlashSaleService) {}

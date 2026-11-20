@@ -3,6 +3,9 @@ import { OrderItemService } from './order-item.service';
 import { CreateOrderItemDto } from './dto/create-order-item.dto';
 import { UpdateOrderItemDto } from './dto/update-order-item.dto';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Order Items')
 @Controller('order-item')
 export class OrderItemController {
   constructor(private readonly orderItemService: OrderItemService) {}

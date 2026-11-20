@@ -13,6 +13,9 @@ async function bootstrap() {
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/',
   });
+  app.useStaticAssets(join(process.cwd(), 'avatars'), {
+    prefix: '/assets/avatars/',
+  });
 
   app.enableCors({
     origin: corsOrigins,

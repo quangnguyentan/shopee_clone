@@ -100,7 +100,7 @@ export class FlashSaleService {
     if (!sale) throw new NotFoundException('Flash sale not found');
 
     const variant = await this.variantRepo.findOne({
-      where: { id: dto.product_variant_id },
+      where: { id: String(dto.product_variant_id) },
     });
     if (!variant) throw new NotFoundException('Product variant not found');
 

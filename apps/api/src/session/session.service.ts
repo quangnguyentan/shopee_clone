@@ -15,7 +15,7 @@ export class SessionsService {
   ) {}
 
   async createSession(data: {
-    userId: number;
+    userId: string;
     ip: string;
     deviceType: 'mobile' | 'desktop';
     userAgent?: string;
@@ -35,7 +35,11 @@ export class SessionsService {
       });
       this.eventEmitter.emit('session.revoked', oldSessions);
     }
-    const session = await this.sessionRepo.create({ ...data, revoked: false });
+    const session = await this.sessionRepo.create({
+      ...data,
+      revoked: false,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
     return await this.sessionRepo.save(session);
   }
 
@@ -52,7 +56,7 @@ export class SessionsService {
     }
   }
 
-  async revokeAll(userId: number) {
+  async revokeAll(userId: string) {
     const sessions = await this.sessionRepo.find({
       where: { userId, revoked: false },
     });

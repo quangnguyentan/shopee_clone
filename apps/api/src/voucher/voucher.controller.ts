@@ -3,6 +3,9 @@ import { VoucherService } from './voucher.service';
 import { CreateVoucherDto } from './dto/create-voucher.dto';
 import { UpdateVoucherDto } from './dto/update-voucher.dto';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Vouchers')
 @Controller('voucher')
 export class VoucherController {
   constructor(private readonly voucherService: VoucherService) {}

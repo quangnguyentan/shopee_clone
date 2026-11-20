@@ -3,7 +3,11 @@ import { BaseController } from '@/base/base.controller';
 import { AuthRole } from '@/common/decorators/auth-role.decorator';
 import { CategoryAttribute } from '@/category-attributes/entities/category-attribute.entity';
 import { CategoryAttributeService } from './category-attributes.service';
+import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Category Attributes')
 @Controller('category-attributes')
 export class CategoryAttributeController extends BaseController<CategoryAttribute> {
   constructor(protected readonly service: CategoryAttributeService) {
@@ -17,6 +21,7 @@ export class CategoryAttributeController extends BaseController<CategoryAttribut
 
   @AuthRole('admin')
   @Post()
+  @ApiAuthenticated()
   create(@Body() dto: Partial<CategoryAttribute> & { category_id: number }) {
     return this.service.create({
       ...dto,

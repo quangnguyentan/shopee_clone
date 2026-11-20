@@ -13,8 +13,9 @@ ENV NODE_ENV=production
 ENV PORT=8080
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/avatars ./avatars
 COPY --from=builder /app/node_modules ./node_modules
 COPY package*.json ./
 
 EXPOSE 8080
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]

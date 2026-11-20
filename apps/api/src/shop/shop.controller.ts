@@ -17,7 +17,11 @@ import { Shop } from './entities/shop.entity';
 import { Auth } from '@/common/decorators/auth.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { AuthRole } from '@/common/decorators/auth-role.decorator';
+import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Shops')
 @Controller('shops')
 export class ShopController extends BaseController<Shop> {
   constructor(protected readonly service: ShopService) {
@@ -42,12 +46,14 @@ export class ShopController extends BaseController<Shop> {
   @Auth()
   @AuthRole('admin')
   @Post()
+  @ApiAuthenticated()
   createShop(@Body() dto: CreateShopDto) {
     return this.service.createShop(dto);
   }
 
   @Auth()
   @Patch(':id')
+  @ApiAuthenticated()
   updateShop(
     @Param('id') id: string,
     @CurrentUser() user,
@@ -58,6 +64,7 @@ export class ShopController extends BaseController<Shop> {
 
   @Auth()
   @Delete(':id')
+  @ApiAuthenticated()
   deleteShop(@Param('id') id: string, @CurrentUser() user) {
     return this.service.deleteShop(+id, user.userId);
   }

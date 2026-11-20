@@ -15,7 +15,7 @@ export class CategoryAttributeValueService extends BaseService<CategoryAttribute
 
   findByAttribute(attributeId: number) {
     return this.repo.find({
-      where: { attribute: { id: attributeId } },
+      where: { attribute: { id: String(attributeId) } },
       order: { id: 'ASC' },
     });
   }

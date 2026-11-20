@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface Product {
-  id: number;
+  id: string;
   shop: Record<string, any>;
   name: string;
   description: string;

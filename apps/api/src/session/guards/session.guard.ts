@@ -22,9 +22,12 @@ export class SessionGuard implements CanActivate {
       throw new UnauthorizedException('Missing session');
     }
 
-    const session = await this.sessionRepo.findOne({
-      where: { id: user.sessionId, revoked: false },
-    });
+    const session = await this.sessionRepo
+      .createQueryBuilder('session')
+      .where('session.id = :id', { id: user.sessionId })
+      .andWhere('session.revoked = false')
+      .andWhere('session."expiresAt" > CURRENT_TIMESTAMP')
+      .getOne();
 
     if (!session) throw new UnauthorizedException('Session revoked');
 

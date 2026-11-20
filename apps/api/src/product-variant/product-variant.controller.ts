@@ -17,7 +17,11 @@ import { ProductVariant } from './entities/product-variant.entity';
 import { Auth } from '@/common/decorators/auth.decorator';
 import { AuthRole } from '@/common/decorators/auth-role.decorator';
 import { PaginationDto } from '@/base/base.dto';
+import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Product Variants')
 @Controller('product-variants')
 export class ProductVariantController extends BaseController<ProductVariant> {
   constructor(protected readonly service: ProductVariantService) {
@@ -41,12 +45,14 @@ export class ProductVariantController extends BaseController<ProductVariant> {
 
   @Auth()
   @Patch(':id')
+  @ApiAuthenticated()
   update(@Param('id') id: string, @Body() dto: UpdateProductVariantDto) {
     return this.service.updateVariant(+id, dto);
   }
 
   @Auth()
   @Delete(':id')
+  @ApiAuthenticated()
   delete(@Param('id') id: string) {
     return this.service.deleteVariant(+id);
   }

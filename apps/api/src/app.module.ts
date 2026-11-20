@@ -55,7 +55,9 @@ import { RecommendationModule } from './recommendation/recommendation.module';
           type: 'postgres',
           url,
           autoLoadEntities: true,
-          synchronize: true,
+          synchronize:
+            process.env.NODE_ENV !== 'production' &&
+            config.get<string>('TYPEORM_SYNCHRONIZE') === 'true',
           extra: {
             max: 10,
             connectionTimeoutMillis: 5000,

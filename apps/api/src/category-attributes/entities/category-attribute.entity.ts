@@ -9,12 +9,17 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
+import { bigintStringTransformer } from '@/common/database/bigint-string.transformer';
 
 @Index(['category_id', 'name'], { unique: true })
 @Entity('category_attributes')
 export class CategoryAttribute extends BaseEntity {
-  @Column({ name: 'category_id', type: 'bigint' })
-  category_id: number;
+  @Column({
+    name: 'category_id',
+    type: 'bigint',
+    transformer: bigintStringTransformer,
+  })
+  category_id: string;
 
   @ManyToOne(() => Category, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'category_id' })

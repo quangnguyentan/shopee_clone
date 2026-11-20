@@ -13,6 +13,9 @@ import { Auth } from '@/common/decorators/auth.decorator';
 import { BaseController } from '@/base/base.controller';
 import { ProductImage } from './entities/product-image.entity';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Product Images')
 @Controller('product-images')
 export class ProductImageController extends BaseController<ProductImage> {
   constructor(protected readonly service: ProductImageService) {

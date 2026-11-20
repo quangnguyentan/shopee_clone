@@ -66,43 +66,49 @@ const LoginCard = () => {
   const isFormValid = form.formState.isValid;
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof loginSchema>) {
+    const loadingToast = toast.loading(t("pages.auth.login.loading.title"));
     try {
-      toast.promise(
-        login({
-          identifier: values.username,
-          password: values.password,
-        }).unwrap(),
-        {
-          loading: t("pages.auth.login.loading.title"),
-          success: (res) => {
-            dispatch(loginSuccess());
-            dispatch(setMe({ user: res.user, sessionId: res.sessionId }));
-            if (!socket.connected) {
-              socket.connect();
-              socket.once("connect", () => {
-                if (res.sessionId)
-                  socket.emit("register_session", res.sessionId);
-              });
-            } else {
-              if (res.sessionId) socket.emit("register_session", res.sessionId);
-            }
+      const response = await login({
+        identifier: values.username,
+        password: values.password,
+      }).unwrap();
+      toast.dismiss(loadingToast);
+      if (!("authenticated" in response)) {
+        toast.error(
+          "require2FA" in response
+            ? "Two-factor verification is required to continue."
+            : "Two-factor setup is required to continue.",
+        );
+        return;
+      }
 
-            replace("/");
-            return t("pages.auth.login.success.title");
-          },
-          error: (err) => {
-            console.log(err);
-            if (err?.data?.code === AUTH_ERROR.EMAIL_NOT_VERIFIED) {
-              setUnverifiedEmail(err.data.message);
-              return "Please verify your email before logging in";
-            }
-
-            return getErrorMessage(err, t, authErrorMap);
-          },
-        },
-      );
+      dispatch(loginSuccess());
+      dispatch(setMe({ user: response.user, sessionId: response.sessionId }));
+      if (!socket.connected) {
+        socket.connect();
+        socket.once("connect", () => {
+          socket.emit("register_session", response.sessionId);
+        });
+      } else {
+        socket.emit("register_session", response.sessionId);
+      }
+      replace("/");
+      toast.success(t("pages.auth.login.success.title"));
     } catch (err) {
-      console.log(err);
+      toast.dismiss(loadingToast);
+      const apiError =
+        typeof err === "object" && err !== null && "data" in err
+          ? (err as { data?: { code?: string; message?: string } })
+          : undefined;
+      if (
+        apiError?.data?.code === AUTH_ERROR.EMAIL_NOT_VERIFIED &&
+        apiError.data.message
+      ) {
+        setUnverifiedEmail(apiError.data.message);
+        return;
+      }
+
+      toast.error(getErrorMessage(apiError, t, authErrorMap));
     }
   }
   console.log(unverifiedEmail, "unverifiedEmail");
