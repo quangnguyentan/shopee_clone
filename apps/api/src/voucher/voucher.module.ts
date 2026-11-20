@@ -3,9 +3,10 @@ import { VoucherService } from './voucher.service';
 import { VoucherController } from './voucher.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Voucher } from './entities/voucher.entity';
+import { VoucherRedemption } from './entities/voucher-redemption.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Voucher])],
+  imports: [TypeOrmModule.forFeature([Voucher, VoucherRedemption])],
   controllers: [VoucherController],
   providers: [VoucherService],
 })

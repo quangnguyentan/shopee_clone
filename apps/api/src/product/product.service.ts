@@ -16,6 +16,8 @@ import { CategoryAttributeValue } from '@/category-attribute-values/entities/cat
 import { renderRichText } from '@/common/utils/render-rich-text.util';
 import { generateCombinations } from '@/common/utils/generateCombinations';
 import { Shop } from '@/shop/entities/shop.entity';
+import { slugify } from '@/common/utils/slug.util';
+import { createProductVariantSignature } from '@/common/utils/product-variant-signature.util';
 
 @Injectable()
 export class ProductService extends BaseService<Product> {
@@ -27,12 +29,30 @@ export class ProductService extends BaseService<Product> {
   }
 
   async createProduct(userId: number, dto: CreateProductDto) {
+    const slug = await this.createProductSlug(dto.shop_id, dto.name);
     return this.create({
       ...dto,
-
-      shop: { id: dto.shop_id } as any,
+      shop_id: String(dto.shop_id),
+      slug,
+      is_active: dto.status === 'active',
+      shop: { id: String(dto.shop_id) } as any,
       description: dto.description,
     });
+  }
+
+  private async createProductSlug(shopId: number, name: string) {
+    const baseSlug = slugify(name);
+    let slug = baseSlug;
+    let suffix = 2;
+    while (
+      await this.repo.findOne({
+        where: { shop_id: String(shopId), slug } as any,
+        select: ['id'],
+      })
+    ) {
+      slug = `${baseSlug}-${suffix++}`;
+    }
+    return slug;
   }
 
   async updateProduct(
@@ -42,6 +62,7 @@ export class ProductService extends BaseService<Product> {
   ) {
     return this.updateById(productId, {
       ...dto,
+      shop_id: dto.shop_id === undefined ? undefined : String(dto.shop_id),
       description: dto.description ?? undefined,
     });
   }
@@ -52,7 +73,7 @@ export class ProductService extends BaseService<Product> {
 
   findByShop(shopId: number) {
     return this.repo.find({
-      where: { shop: { id: shopId } },
+      where: { shop: { id: String(shopId) } },
       relations: ['images'],
       order: { id: 'DESC' },
     });
@@ -71,7 +92,7 @@ export class ProductService extends BaseService<Product> {
   }
   async findOneById(id: number) {
     return this.repo.findOne({
-      where: { id },
+      where: { id: String(id) },
       relations: ['shop', 'images', 'variants', 'category'],
     });
   }
@@ -167,26 +188,28 @@ export class ProductService extends BaseService<Product> {
       const stocks = dto.variants.map((v) => v.stock);
 
       const shop = await manager.findOneByOrFail(Shop, {
-        id: dto.shop_id,
+        id: String(dto.shop_id),
       });
 
       // 1️⃣ CREATE PRODUCT
       const product = await manager.save(
         manager.create(Product, {
           name: dto.name,
+          slug: await this.createProductSlug(dto.shop_id, dto.name),
+          is_active: dto.status === 'active',
           description: dto.description,
           status: dto.status,
           price_min: Math.min(...prices),
           price_max: Math.max(...prices),
           stock: stocks.reduce((a, b) => a + b, 0),
           shop,
-          category_id: dto.category_id,
+          category_id: String(dto.category_id),
         }),
       );
 
       // 2️⃣ LOAD CATEGORY ATTRIBUTES
       const categoryAttributes = await manager.find(CategoryAttribute, {
-        where: { category_id: dto.category_id },
+        where: { category_id: String(dto.category_id) },
         relations: ['values'],
       });
 
@@ -204,12 +227,51 @@ export class ProductService extends BaseService<Product> {
         });
 
         // ✅ SAVE VARIANT FIRST
+        const signatureParts: {
+          attributeId: string;
+          valueId: string | null;
+          customValue: string | null;
+        }[] = [];
+
+        for (const pair of combo) {
+          const [attrName, value] = pair.split(':');
+          const categoryAttr = attrMap.get(attrName);
+
+          if (!categoryAttr) {
+            throw new Error(`Attribute "${attrName}" not found`);
+          }
+
+          if (categoryAttr.type === 'input') {
+            signatureParts.push({
+              attributeId: categoryAttr.id,
+              valueId: null,
+              customValue: value,
+            });
+          } else {
+            const attrValue = categoryAttr.values.find(
+              (candidate) => candidate.value === value,
+            );
+            if (!attrValue) {
+              throw new Error(
+                `Value "${value}" not found for attribute "${attrName}"`,
+              );
+            }
+            signatureParts.push({
+              attributeId: categoryAttr.id,
+              valueId: attrValue.id,
+              customValue: null,
+            });
+          }
+        }
+
         const variant = await manager.save(
           manager.create(ProductVariant, {
             product,
             sku,
             price: variantInput.price,
             stock: variantInput.stock,
+            attribute_signature:
+              createProductVariantSignature(signatureParts),
           }),
         );
 
@@ -281,7 +343,7 @@ export class ProductService extends BaseService<Product> {
   ) {
     return this.repo.manager.transaction(async (manager) => {
       const product = await manager.findOne(Product, {
-        where: { id: productId },
+        where: { id: String(productId) },
         relations: ['variants', 'shop'],
       });
 
@@ -299,12 +361,13 @@ export class ProductService extends BaseService<Product> {
       await manager.save(
         manager.merge(Product, product, {
           name: dto.name,
+          is_active: dto.status === 'active',
           description: dto.description,
           status: dto.status,
           price_min: Math.min(...prices),
           price_max: Math.max(...prices),
           stock: stocks.reduce((a, b) => a + b, 0),
-          category_id: dto.category_id,
+          category_id: String(dto.category_id),
         }),
       );
 
@@ -319,7 +382,7 @@ export class ProductService extends BaseService<Product> {
       }
 
       const categoryAttributes = await manager.find(CategoryAttribute, {
-        where: { category_id: dto.category_id },
+        where: { category_id: String(dto.category_id) },
         relations: ['values'],
       });
 
@@ -335,12 +398,40 @@ export class ProductService extends BaseService<Product> {
           options: combo.map((c) => c.replace(':', '-')),
         });
 
+        const signatureParts: {
+          attributeId: string;
+          valueId: string | null;
+          customValue: string | null;
+        }[] = [];
+        for (const pair of combo) {
+          const [attrName, value] = pair.split(':');
+          const categoryAttr = attrMap.get(attrName)!;
+          if (categoryAttr.type === 'input') {
+            signatureParts.push({
+              attributeId: categoryAttr.id,
+              valueId: null,
+              customValue: value,
+            });
+          } else {
+            const attrValue = categoryAttr.values.find(
+              (candidate) => candidate.value === value,
+            )!;
+            signatureParts.push({
+              attributeId: categoryAttr.id,
+              valueId: attrValue.id,
+              customValue: null,
+            });
+          }
+        }
+
         const variant = await manager.save(
           manager.create(ProductVariant, {
             product,
             sku,
             price: variantInput.price,
             stock: variantInput.stock,
+            attribute_signature:
+              createProductVariantSignature(signatureParts),
           }),
         );
 
@@ -490,7 +581,7 @@ export class ProductService extends BaseService<Product> {
     );
   }
   async viewProduct(productId: number, keyword?: string) {
-    await this.repo.increment({ id: productId }, 'view_count', 1);
+    await this.repo.increment({ id: String(productId) }, 'view_count', 1);
 
     if (keyword) {
       await this.repo.manager.insert('search_logs', {

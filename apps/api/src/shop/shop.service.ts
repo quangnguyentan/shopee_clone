@@ -11,6 +11,7 @@ import { Shop } from './entities/shop.entity';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { PaginationDto } from '@/base/base.dto';
+import { slugify } from '@/common/utils/slug.util';
 
 @Injectable()
 export class ShopService extends BaseService<Shop> {
@@ -28,47 +29,55 @@ export class ShopService extends BaseService<Shop> {
   }
   async findOneById(id: number) {
     return this.repo.findOne({
-      where: { id },
+      where: { id: String(id) },
       relations: ['user', 'products'],
     });
   }
 
   async createShop(dto: CreateShopDto) {
     const existed = await this.repo.findOne({
-      where: { user: { id: dto.user_id } } as any,
+      where: { user: { id: String(dto.user_id) } } as any,
     });
 
     if (existed) {
       throw new ForbiddenException('User already has a shop');
     }
 
+    const baseSlug = slugify(dto.name);
+    let slug = baseSlug;
+    let suffix = 2;
+    while (await this.repo.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${suffix++}`;
+    }
+
     return this.create({
       name: dto.name,
+      slug,
       description: dto.description,
       logo: dto.logo,
       rating: dto.rating ?? 0,
       is_active: dto.is_active ?? true,
-      user: { id: dto.user_id } as any,
+      user: { id: String(dto.user_id) } as any,
     });
   }
 
   async updateShop(shopId: number, user: any, dto: UpdateShopDto) {
     const shop = await this.repo.findOne({
-      where: { id: shopId },
+      where: { id: String(shopId) },
       relations: ['user'],
     });
 
     if (!shop) throw new NotFoundException('Shop not found');
 
     const isAdmin = user.role === 'admin';
-    const isOwner = shop.user.id === user.userId;
+    const isOwner = shop.user.id === String(user.userId);
 
     if (!isAdmin && !isOwner) {
       throw new ForbiddenException('No permission');
     }
 
     if (dto.user_id) {
-      shop.user = { id: dto.user_id } as any;
+      shop.user = { id: String(dto.user_id) } as any;
       delete (dto as any).user_id;
     }
 
@@ -78,13 +87,13 @@ export class ShopService extends BaseService<Shop> {
 
   async deleteShop(shopId: number, userId: number) {
     const shop = await this.repo.findOne({
-      where: { id: shopId },
+      where: { id: String(shopId) },
       relations: ['user'],
     });
 
     if (!shop) throw new NotFoundException('Shop not found');
 
-    if (shop.user.id !== userId) {
+    if (shop.user.id !== String(userId)) {
       throw new ForbiddenException('Not shop owner');
     }
 

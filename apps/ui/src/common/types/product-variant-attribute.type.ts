@@ -3,16 +3,16 @@ import type { CategoryAttribute } from "./category-attribute.type";
 import type { CategoryAttributeValue } from "./category-attribute-value.type";
 
 export interface ProductVariantAttribute {
-  id: number;
+  id: string;
 
-  variant_id: number;
-  variant: ProductVariant;
+  variant_id: string;
+  variant?: ProductVariant;
 
-  attribute_id: number;
-  attribute: CategoryAttribute;
+  attribute_id: string;
+  attribute?: CategoryAttribute;
 
-  value_id: number | null;
-  value: CategoryAttributeValue | null;
+  value_id: string | null;
+  value?: CategoryAttributeValue | null;
 
   custom_value: string | null;
 

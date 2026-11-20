@@ -5,9 +5,12 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { Session } from '@/session/entities/session.entity';
 
+@Index('uq_refresh_tokens_jti', ['jti'], { unique: true })
+@Index('idx_refresh_tokens_expires', ['expires_at'])
 @Entity('refresh_tokens')
 export class RefreshToken {
   @PrimaryGeneratedColumn('uuid')
@@ -28,6 +31,9 @@ export class RefreshToken {
 
   @Column()
   jti: string;
+
+  @Column({ type: 'timestamptz' })
+  expires_at: Date;
 
   @CreateDateColumn()
   created_at: Date;

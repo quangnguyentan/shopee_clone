@@ -3,6 +3,9 @@ import { ProductReviewService } from './product-review.service';
 import { CreateProductReviewDto } from './dto/create-product-review.dto';
 import { UpdateProductReviewDto } from './dto/update-product-review.dto';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Product Reviews')
 @Controller('product-review')
 export class ProductReviewController {
   constructor(private readonly productReviewService: ProductReviewService) {}

@@ -3,6 +3,9 @@ import { BaseController } from '@/base/base.controller';
 import { ProductVariantAttribute } from './entities/product-variant-attribute.entity';
 import { ProductVariantAttributeService } from './product-variant-attributes.service';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Product Variant Attributes')
 @Controller('product-variant-attributes')
 export class ProductVariantAttributeController extends BaseController<ProductVariantAttribute> {
   constructor(protected readonly service: ProductVariantAttributeService) {

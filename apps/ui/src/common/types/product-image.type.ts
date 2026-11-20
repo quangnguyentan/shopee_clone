@@ -1,13 +1,17 @@
 import type { Product } from "./product.type";
 
 export interface ProductImage {
-  id: A;
+  id: string;
 
-  product: Product;
+  product_id?: string;
 
-  url: string;
+  product?: Product;
+
+  url?: string;
 
   is_primary: boolean;
+
+  sort_order?: number;
 }
 
 export interface ProductImageView extends ProductImage {

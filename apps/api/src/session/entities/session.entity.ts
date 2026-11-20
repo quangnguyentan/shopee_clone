@@ -5,16 +5,25 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  JoinColumn,
+  ManyToOne,
 } from 'typeorm';
+import { User } from '@/user/entities/user.entity';
+import { bigintStringTransformer } from '@/common/database/bigint-string.transformer';
 
 @Entity('sessions')
 @Index(['userId', 'deviceType', 'revoked'])
+@Index('idx_sessions_expires_at', ['expiresAt'])
 export class Session {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'bigint' })
-  userId: number;
+  @Column({ type: 'bigint', transformer: bigintStringTransformer })
+  userId: string;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
   @Column()
   ip: string;
@@ -30,6 +39,9 @@ export class Session {
 
   @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   lastActive: Date;
+
+  @Column({ type: 'timestamptz' })
+  expiresAt: Date;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

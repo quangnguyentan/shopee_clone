@@ -58,7 +58,7 @@ export class CartService {
       relations: ['cart', 'cart.user'],
     });
 
-    if (!item || item.cart.user.id !== userId) {
+    if (!item || item.cart.user.id !== String(userId)) {
       throw new ForbiddenException('Not allowed');
     }
 

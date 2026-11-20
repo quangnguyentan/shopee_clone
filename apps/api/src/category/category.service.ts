@@ -6,6 +6,7 @@ import { Category } from './entities/category.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PaginationDto } from '@/base/base.dto';
+import { slugify } from '@/common/utils/slug.util';
 
 @Injectable()
 export class CategoryService extends BaseService<Category> {
@@ -21,14 +22,22 @@ export class CategoryService extends BaseService<Category> {
 
     if (dto.parent_id) {
       parent = await this.repo.findOne({
-        where: { id: dto.parent_id },
+        where: { id: String(dto.parent_id) },
       });
 
       if (!parent) throw new NotFoundException('Parent category not found');
     }
 
+    const baseSlug = slugify(dto.name);
+    let slug = baseSlug;
+    let suffix = 2;
+    while (await this.repo.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${suffix++}`;
+    }
+
     return this.create({
       name: dto.name,
+      slug,
       imageUrl: dto.imageUrl,
       parent,
     });
@@ -37,7 +46,7 @@ export class CategoryService extends BaseService<Category> {
   async updateCategory(id: number, dto: UpdateCategoryDto) {
     if (dto.parent_id) {
       const parent = await this.repo.findOne({
-        where: { id: dto.parent_id },
+        where: { id: String(dto.parent_id) },
       });
 
       if (!parent) throw new NotFoundException('Parent category not found');
@@ -74,7 +83,7 @@ export class CategoryService extends BaseService<Category> {
   }
   async findOneById(id: number) {
     return this.repo.findOne({
-      where: { id },
+      where: { id: String(id) },
       relations: ['children', 'attributes', 'parent'],
     });
   }

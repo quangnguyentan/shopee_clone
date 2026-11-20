@@ -2,9 +2,9 @@ import type { Product } from "./product.type";
 import type { User } from "./user.type";
 
 export interface Shop {
-  id: A;
+  id: string;
 
-  user: User;
+  user?: User;
 
   name: string;
 
@@ -16,5 +16,5 @@ export interface Shop {
 
   is_active: boolean;
 
-  products: Product[];
+  products?: Product[];
 }

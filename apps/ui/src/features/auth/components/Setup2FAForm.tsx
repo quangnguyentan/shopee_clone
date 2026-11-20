@@ -7,7 +7,7 @@ import {
   useVerify2FAMutation,
 } from "@/src/common/api/auth.api";
 
-export default function Setup2FAForm({ userId }: { userId: number }) {
+export default function Setup2FAForm({ userId }: { userId: string }) {
   const [setup2FA] = useSetup2FAMutation();
   const [verify2FA] = useVerify2FAMutation();
   const [qr, setQr] = useState<string | null>(null);

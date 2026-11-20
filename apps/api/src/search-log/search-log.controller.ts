@@ -12,6 +12,9 @@ import { CreateSearchLogDto } from './dto/create-search-log.dto';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { OptionalAuth } from '@/common/decorators/optional-auth.decorator';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Search Logs')
 @Controller('search-logs')
 export class SearchLogController {
   constructor(private readonly searchLogService: SearchLogService) {}

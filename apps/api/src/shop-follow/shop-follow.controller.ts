@@ -3,6 +3,9 @@ import { ShopFollowService } from './shop-follow.service';
 import { CreateShopFollowDto } from './dto/create-shop-follow.dto';
 import { UpdateShopFollowDto } from './dto/update-shop-follow.dto';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Shop Follows')
 @Controller('shop-follow')
 export class ShopFollowController {
   constructor(private readonly shopFollowService: ShopFollowService) {}

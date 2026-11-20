@@ -35,9 +35,12 @@ export class SessionGateway {
   async handleRegisterSession(client: Socket, sessionId: string) {
     if (!sessionId) return;
 
-    const session = await this.sessionRepo.findOne({
-      where: { id: sessionId, revoked: false },
-    });
+    const session = await this.sessionRepo
+      .createQueryBuilder('session')
+      .where('session.id = :id', { id: sessionId })
+      .andWhere('session.revoked = false')
+      .andWhere('session."expiresAt" > CURRENT_TIMESTAMP')
+      .getOne();
 
     if (!session) {
       client.disconnect();

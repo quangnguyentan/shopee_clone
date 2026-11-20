@@ -1,16 +1,14 @@
 import type { Product } from "./product.type";
+import type { ProductVariantAttribute } from "./product-variant-attribute.type";
 
 export interface ProductVariant {
-  id: A;
-  product_id: A;
-  product: Product;
+  id: string;
+  product_id: string;
+  product?: Product;
   sku: string;
   price: number;
+  compare_at_price: number | null;
+  attribute_signature: string;
   stock: number;
-
-  attributes: {
-    attribute_id: A;
-    name: string;
-    value: string;
-  }[];
+  attributes?: ProductVariantAttribute[];
 }

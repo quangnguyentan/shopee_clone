@@ -5,7 +5,11 @@ import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Auth } from '@/common/decorators/auth.decorator';
+import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Categories')
 @Controller('categories')
 export class CategoryController extends BaseController<Category> {
   constructor(protected readonly service: CategoryService) {
@@ -24,12 +28,14 @@ export class CategoryController extends BaseController<Category> {
 
   @Auth()
   @Post()
+  @ApiAuthenticated()
   create(@Body() dto: CreateCategoryDto) {
     return this.service.createCategory(dto);
   }
 
   @Auth()
   @Patch(':id')
+  @ApiAuthenticated()
   update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     return this.service.updateCategory(+id, dto);
   }

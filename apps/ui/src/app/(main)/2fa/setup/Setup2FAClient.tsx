@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 
 export default function Setup2FAPage() {
   const searchParams = useSearchParams();
-  const userId = Number(searchParams.get("userId"));
+  const userId = searchParams.get("userId");
 
   if (!userId) {
     return <div>Invalid user</div>;

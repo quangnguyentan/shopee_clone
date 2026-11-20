@@ -6,9 +6,14 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  PrimaryGeneratedColumn,
+  Index,
+  DeleteDateColumn,
 } from 'typeorm';
 
+@Index('uq_categories_slug_active', ['slug'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('categories')
 export class Category extends BaseEntity {
   @ManyToOne(() => Category, (c) => c.children, {
@@ -26,6 +31,12 @@ export class Category extends BaseEntity {
 
   @Column({ name: 'image_url', type: 'varchar', length: 500, nullable: true })
   imageUrl: string;
+
+  @Column({ type: 'varchar', length: 255 })
+  slug: string;
+
+  @DeleteDateColumn({ type: 'timestamptz', nullable: true })
+  deleted_at: Date | null;
 
   @OneToMany(() => CategoryAttribute, (a) => a.category)
   attributes: CategoryAttribute[];

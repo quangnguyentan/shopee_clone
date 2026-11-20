@@ -1,38 +1,95 @@
+import { bigintStringTransformer } from '@/common/database/bigint-string.transformer';
+import {
+  OrderPaymentStatus,
+  OrderStatus,
+} from '@/common/enums/marketplace.enums';
 import { OrderItem } from 'src/order-item/entities/order-item.entity';
+import { Payment } from 'src/payment/entities/payment.entity';
+import { ShopOrder } from 'src/shop-order/entities/shop-order.entity';
+import { OrderStatusHistory } from 'src/order-status-history/entities/order-status-history.entity';
 import { User } from 'src/user/entities/user.entity';
 import {
-  Entity,
-  PrimaryGeneratedColumn,
+  Check,
   Column,
+  Entity,
+  Index,
+  JoinColumn,
   ManyToOne,
   OneToMany,
-  CreateDateColumn,
-  JoinColumn,
-  Index,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 
-@Index('idx_orders_user_status_created', ['user_id', 'status', 'created_at'])
+@Index('uq_orders_order_no', ['order_no'], { unique: true })
+@Index('idx_orders_buyer_status_created', ['buyer_id', 'status', 'created_at'])
+@Check('"total_amount" >= 0')
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: number;
+  id: string;
 
-  @Column({ name: 'user_id', type: 'bigint' })
-  user_id: number;
+  @Column({ name: 'buyer_id', type: 'bigint', transformer: bigintStringTransformer })
+  buyer_id: string;
 
-  @ManyToOne(() => User, (user) => user.orders)
-  @JoinColumn({ name: 'user_id' })
-  user: User;
+  @ManyToOne(() => User, (user) => user.orders, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'buyer_id' })
+  buyer: User;
 
-  @Column('decimal')
-  total_amount: number;
+  @Column({ type: 'varchar', length: 40 })
+  order_no: string;
 
-  @Column()
-  status: string;
+  @Column({ type: 'jsonb', nullable: true })
+  shipping_address: Record<string, unknown> | null;
+
+  @Column('numeric', { precision: 18, scale: 2, default: 0 })
+  subtotal: string;
+
+  @Column('numeric', { precision: 18, scale: 2, default: 0 })
+  shipping_fee: string;
+
+  @Column('numeric', { precision: 18, scale: 2, default: 0 })
+  discount_amount: string;
+
+  @Column('numeric', { precision: 18, scale: 2, default: 0 })
+  total_amount: string;
+
+  @Column({ type: 'char', length: 3, default: 'VND' })
+  currency: string;
+
+  @Column({
+    type: 'enum',
+    enum: OrderStatus,
+    default: OrderStatus.PENDING_PAYMENT,
+  })
+  status: OrderStatus;
+
+  @Column({
+    type: 'enum',
+    enum: OrderPaymentStatus,
+    default: OrderPaymentStatus.PENDING,
+  })
+  payment_status: OrderPaymentStatus;
+
+  @Column({ type: 'text', nullable: true })
+  cancelled_reason: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  cancelled_at: Date | null;
 
   @OneToMany(() => OrderItem, (item) => item.order)
   items: OrderItem[];
 
-  @CreateDateColumn()
+  @OneToMany(() => ShopOrder, (shopOrder) => shopOrder.order)
+  shop_orders: ShopOrder[];
+
+  @OneToMany(() => Payment, (payment) => payment.order)
+  payments: Payment[];
+
+  @OneToMany(() => OrderStatusHistory, (history) => history.order)
+  status_history: OrderStatusHistory[];
+
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
+
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
+  updated_at: Date;
 }

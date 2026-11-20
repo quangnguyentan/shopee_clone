@@ -2,9 +2,9 @@ import type { CategoryAttributeValue } from "./category-attribute-value.type";
 import type { Category } from "./category.type";
 
 export interface CategoryAttribute {
-  id: A;
+  id: string;
 
-  category_id: number;
+  category_id: string;
 
   category: Category;
 

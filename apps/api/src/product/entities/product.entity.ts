@@ -12,14 +12,20 @@ import {
   CreateDateColumn,
   JoinColumn,
   Index,
+  DeleteDateColumn,
 } from 'typeorm';
+import { bigintStringTransformer } from '@/common/database/bigint-string.transformer';
 
 @Index('idx_products_category_id', ['category_id'])
 @Index('idx_products_shop_id', ['shop_id'])
+@Index('uq_products_shop_slug_active', ['shop_id', 'slug'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('products')
 export class Product extends BaseEntity {
-  @Column()
-  shop_id: number;
+  @Column({ type: 'bigint', transformer: bigintStringTransformer })
+  shop_id: string;
 
   @ManyToOne(() => Shop, (shop) => shop.products)
   @JoinColumn({ name: 'shop_id' })
@@ -65,6 +71,15 @@ export class Product extends BaseEntity {
   @Column({ default: 0 })
   rating_count: number; // số lượt đánh giá
 
+  @Column({ type: 'boolean', default: true })
+  is_active: boolean;
+
+  @Column({ type: 'varchar', length: 255 })
+  slug: string;
+
+  @DeleteDateColumn({ type: 'timestamptz', nullable: true })
+  deleted_at: Date | null;
+
   @Column({ default: false })
   is_featured: boolean;
 
@@ -74,8 +89,13 @@ export class Product extends BaseEntity {
   @OneToMany(() => ProductImage, (img) => img.product)
   images: ProductImage[];
 
-  @Column({ name: 'category_id', type: 'bigint', nullable: true })
-  category_id: number;
+  @Column({
+    name: 'category_id',
+    type: 'bigint',
+    nullable: true,
+    transformer: bigintStringTransformer,
+  })
+  category_id: string | null;
 
   @ManyToOne(() => Category, { nullable: true })
   @JoinColumn({ name: 'category_id' })

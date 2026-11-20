@@ -29,7 +29,7 @@ export class ProductVariantService extends BaseService<ProductVariant> {
 
   async findOneById(id: number) {
     const variant = await this.repo.findOne({
-      where: { id },
+      where: { id: String(id) },
       relations: [
         'product',
         'attributes',
@@ -45,7 +45,7 @@ export class ProductVariantService extends BaseService<ProductVariant> {
 
   findByProduct(productId: number) {
     return this.repo.find({
-      where: { product: { id: productId } } as any,
+      where: { product: { id: String(productId) } } as any,
       relations: ['attributes', 'attributes.variant'],
     });
   }

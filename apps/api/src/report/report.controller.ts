@@ -3,6 +3,9 @@ import { ReportService } from './report.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Reports')
 @Controller('report')
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}

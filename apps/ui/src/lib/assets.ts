@@ -1,6 +1,6 @@
 import { getEnv } from "../common/config/env.client";
 
-export const getAssetUrl = (path?: string) => {
+export const getAssetUrl = (path?: string | null) => {
   if (!path) return undefined;
 
   const assetBase = new URL(getEnv().NEXT_PUBLIC_ASSETS_URL);

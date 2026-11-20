@@ -24,7 +24,11 @@ import { PaginationDto } from '@/base/base.dto';
 import { OptionalAuth } from '@/common/decorators/optional-auth.decorator';
 import { RecommendationClient } from '@/recommendation/recommendation.client';
 import { RecommendationFilterDto } from '@/recommendation/dto/recommendation-filter.dto';
+import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Products')
 @Controller('products')
 export class ProductController extends BaseController<Product> {
   constructor(
@@ -40,12 +44,14 @@ export class ProductController extends BaseController<Product> {
   }
   @Auth()
   @Post('seller')
+  @ApiAuthenticated()
   createBySeller(@CurrentUser() user, @Body() dto: CreateProductDto) {
     return this.service.createProduct(user.userId, dto);
   }
 
   @Auth()
   @Patch('seller/:id')
+  @ApiAuthenticated()
   updateBySeller(
     @Param('id') id: string,
     @CurrentUser() user,
@@ -56,13 +62,13 @@ export class ProductController extends BaseController<Product> {
 
   @Auth()
   @Delete('seller/:id')
+  @ApiAuthenticated()
   deleteBySeller(@Param('id') id: string, @CurrentUser() user) {
     return this.service.deleteProduct(+id, user.userId);
   }
-
   @Get('buyer')
-  findAllView() {
-    return this.service.findAllView();
+  findAllView(@Query() query: PaginationDto) {
+    return this.service.findAllView(query);
   }
   @Get('buyer/:id')
   async viewProduct(
@@ -91,24 +97,28 @@ export class ProductController extends BaseController<Product> {
 
   @AuthRole('admin')
   @Get('')
+  @ApiAuthenticated()
   findAll() {
     return this.service.findAll();
   }
 
   @AuthRole('admin')
   @Get(':id')
+  @ApiAuthenticated()
   findOne(@Param('id') id: string) {
     return this.service.findOneById(+id);
   }
 
   @Auth()
   @Post('seller/full')
+  @ApiAuthenticated()
   createFull(@CurrentUser() user, @Body() dto: CreateProductWithVariantDto) {
     return this.service.createFullProduct(user.userId, dto);
   }
 
   @Auth()
   @Put('seller/:id/full')
+  @ApiAuthenticated()
   updateFull(
     @CurrentUser() user,
     @Param('id', ParseIntPipe) id: number,

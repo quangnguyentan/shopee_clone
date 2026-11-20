@@ -164,7 +164,7 @@ export class AuthService {
     const user = this.userRepo.create({
       email: dto.email,
       phone: dto.phone,
-      password: await bcrypt.hash(dto.password, 10),
+      password_hash: await bcrypt.hash(dto.password, 10),
       name: generateFromEmail(dto.email),
       avatar: AVATAR_DEFAULT,
       auth_provider: 'local',
@@ -261,7 +261,12 @@ export class AuthService {
     res: Response,
     scope: AuthScope,
   ) {
-    const user = await this.userRepo.findOne({ where: { email: identifier } });
+    const user = await this.userRepo
+      .createQueryBuilder('user')
+      .addSelect('user.password_hash')
+      .where('user.email = :identifier', { identifier })
+      .andWhere('user.deleted_at IS NULL')
+      .getOne();
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
     if (user.role !== scope) {
       throw new AppException(AUTH_ERROR.UNAUTHORIZED);
@@ -278,7 +283,7 @@ export class AuthService {
         return { require2FASetup: true };
       }
     }
-    const ok = await bcrypt.compare(password, user.password);
+    const ok = await bcrypt.compare(password, user.password_hash ?? '');
     if (!ok) throw new AppException(AUTH_ERROR.INVALID_PASSWORD);
 
     if (user.two_factor_enabled) return { require2FA: true, userId: user.id };
@@ -321,7 +326,7 @@ export class AuthService {
         revoked: false,
       },
     });
-    if (!oldToken) {
+    if (!oldToken || oldToken.expires_at <= new Date()) {
       this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.INVALID_REFRESH_TOKEN);
     }
@@ -332,7 +337,7 @@ export class AuthService {
     }
 
     const session = await this.sessionsService.findById(payload.sessionId);
-    if (!session || session.revoked) {
+    if (!session || session.revoked || session.expiresAt <= new Date()) {
       this.clearAuthCookies(res, scope);
       throw new AppException(AUTH_ERROR.SESSION_REVOKED);
     }
@@ -480,6 +485,7 @@ export class AuthService {
       token_hash: tokenHash,
       revoked: false,
       jti,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
     await manager.save(newToken);
@@ -502,7 +508,7 @@ export class AuthService {
     return this.buildAuthResponse(user, sessionId);
   }
 
-  async setup2FA(userId: number) {
+  async setup2FA(userId: string) {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
@@ -518,7 +524,7 @@ export class AuthService {
   }
 
   async verify2FA(
-    userId: number,
+    userId: string,
     token: string,
     res: Response,
     scope: AuthScope,
@@ -552,7 +558,7 @@ export class AuthService {
     );
   }
 
-  async requestChangePassword(userId: number) {
+  async requestChangePassword(userId: string) {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
@@ -567,7 +573,7 @@ export class AuthService {
   }
 
   async verify2FAForAction(
-    userId: number,
+    userId: string,
     action: 'CHANGE_PASSWORD',
     otp: string,
   ) {
@@ -606,7 +612,7 @@ export class AuthService {
     const user = await this.userRepo.findOneBy({ id: payload.sub });
     if (!user) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
-    user.password = await bcrypt.hash(newPassword, 10);
+    user.password_hash = await bcrypt.hash(newPassword, 10);
     await this.userRepo.save(user);
 
     await this.refreshRepo.delete({
@@ -628,7 +634,7 @@ export class AuthService {
 
     const admin = this.userRepo.create({
       email: dto.email,
-      password: await bcrypt.hash(dto.password, 10),
+      password_hash: await bcrypt.hash(dto.password, 10),
       role: 'admin',
       admin_level: 1,
       status: 'PENDING',
@@ -642,12 +648,12 @@ export class AuthService {
     };
   }
 
-  async approveAdmin(adminId: number, approver: User) {
+  async approveAdmin(adminId: string, approver: User) {
     if (approver.admin_level !== 2) {
       throw new AppException(AUTH_ERROR.UNAUTHORIZED);
     }
 
-    const admin = await this.userRepo.findOneBy({ id: adminId });
+    const admin = await this.userRepo.findOneBy({ id: String(adminId) });
     if (!admin || admin.role !== 'admin') {
       throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
     }
@@ -658,12 +664,12 @@ export class AuthService {
     return { message: 'Admin approved' };
   }
 
-  async suspendAdmin(adminId: number, approver: User) {
+  async suspendAdmin(adminId: string, approver: User) {
     if (approver.admin_level !== 2) {
       throw new AppException(AUTH_ERROR.UNAUTHORIZED);
     }
 
-    const admin = await this.userRepo.findOneBy({ id: adminId });
+    const admin = await this.userRepo.findOneBy({ id: String(adminId) });
     if (!admin) throw new AppException(AUTH_ERROR.USER_NOT_FOUND);
 
     admin.status = 'SUSPENDED';

@@ -21,13 +21,13 @@ export class CategoryAttributeService extends BaseService<CategoryAttribute> {
   }
   async findOneById(id: number) {
     return this.repo.findOne({
-      where: { id },
+      where: { id: String(id) },
       relations: ['category', 'values'],
     });
   }
   findByCategory(categoryId: number) {
     return this.repo.find({
-      where: { category: { id: categoryId } },
+      where: { category: { id: String(categoryId) } },
       relations: ['values'],
       order: { id: 'ASC' },
     });

@@ -28,7 +28,7 @@ export class ProductImageService extends BaseService<ProductImage> {
 
   async findOneById(id: number) {
     const image = await this.repo.findOne({
-      where: { id },
+      where: { id: String(id) },
       relations: ['product'],
     });
     if (!image) {
@@ -43,14 +43,14 @@ export class ProductImageService extends BaseService<ProductImage> {
     is_primary?: boolean;
   }) {
     const product = await this.productRepo.findOne({
-      where: { id: dto.product_id },
+      where: { id: String(dto.product_id) },
     });
 
     if (!product) throw new NotFoundException('Product not found');
 
     // nếu set primary → reset ảnh cũ
     if (dto.is_primary) {
-      await this.repo.update({ product: { id: dto.product_id } } as any, {
+      await this.repo.update({ product: { id: String(dto.product_id) } } as any, {
         is_primary: false,
       });
     }
@@ -64,14 +64,14 @@ export class ProductImageService extends BaseService<ProductImage> {
 
   findByProduct(productId: number) {
     return this.repo.find({
-      where: { product: { id: productId } } as any,
+      where: { product: { id: String(productId) } } as any,
       order: { is_primary: 'DESC', id: 'ASC' },
     });
   }
 
   async setPrimary(imageId: number) {
     const image = await this.repo.findOne({
-      where: { id: imageId },
+      where: { id: String(imageId) },
       relations: ['product'],
     });
 
@@ -86,7 +86,7 @@ export class ProductImageService extends BaseService<ProductImage> {
   }
   async deleteImage(imageId: number) {
     const image = await this.repo.findOne({
-      where: { id: imageId },
+      where: { id: String(imageId) },
       relations: ['product'],
     });
 

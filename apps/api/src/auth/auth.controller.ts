@@ -22,7 +22,13 @@ import { Auth } from '@/common/decorators/auth.decorator';
 import { AuthGuard } from '@nestjs/passport';
 import { SuperAdminGuard } from './guards/supper-admin.guard';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import {
+  ApiAuthenticated,
+  ApiControllerDocs,
+} from '@/common/decorators/api-controller-docs.decorator';
+import { ApiBody, ApiParam } from '@nestjs/swagger';
 
+@ApiControllerDocs('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -34,6 +40,21 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('qr/verify')
+  @ApiAuthenticated()
+  @ApiBody({
+    description: 'QR session identifier to confirm.',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: {
+          type: 'string',
+          description: 'Session ID returned when the QR code was created.',
+          example: 'qr-session-123',
+        },
+      },
+      required: ['sessionId'],
+    },
+  })
   verifyQRCode(@Req() req, @Body() body: { sessionId: string }) {
     return this.authService.verifyQRCode(body.sessionId, req.user.sub);
   }
@@ -44,12 +65,47 @@ export class AuthController {
   }
 
   @Post('resend-verify-email')
+  @ApiBody({
+    description: 'Email address for the verification email.',
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          description: 'Account email address.',
+          example: 'buyer@example.com',
+        },
+      },
+      required: ['email'],
+    },
+  })
   resendVerifyEmail(@Body('email') email: string) {
     if (!email) throw new BadRequestException('Email is required');
     return this.authService.resendVerifyEmail(email);
   }
 
   @Post('verify-email-otp')
+  @ApiBody({
+    description: 'Email verification code.',
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          description: 'Account email address.',
+          example: 'buyer@example.com',
+        },
+        otp: {
+          type: 'string',
+          description: 'One-time verification code.',
+          example: '123456',
+        },
+      },
+      required: ['email', 'otp'],
+    },
+  })
   verifyEmailOtp(@Body() body: { email: string; otp: string }) {
     return this.authService.verifyEmailOtp(body.email, body.otp);
   }
@@ -58,6 +114,12 @@ export class AuthController {
     return this.authService.register(dto);
   }
   @Post(':scope/login')
+  @ApiParam({
+    name: 'scope',
+    description: 'Authentication account type.',
+    enum: ['admin', 'buyer', 'seller'],
+    example: 'buyer',
+  })
   login(
     @Param('scope') scope: AuthScope,
     @Body() dto: LoginDto,
@@ -79,6 +141,12 @@ export class AuthController {
     );
   }
   @Post(':scope/refresh')
+  @ApiParam({
+    name: 'scope',
+    description: 'Authentication account type.',
+    enum: ['admin', 'buyer', 'seller'],
+    example: 'buyer',
+  })
   refresh(
     @Param('scope') scope: AuthScope,
     @Req() req: any,
@@ -118,6 +186,12 @@ export class AuthController {
   }
 
   @Post(':scope/2fa/verify')
+  @ApiParam({
+    name: 'scope',
+    description: 'Authentication account type.',
+    enum: ['admin', 'buyer', 'seller'],
+    example: 'buyer',
+  })
   verify2FA(
     @Param('scope') scope: AuthScope,
     @Body() dto: Verify2FADto,
@@ -129,12 +203,14 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('change-password/request')
+  @ApiAuthenticated()
   async requestChangePassword(@Req() req) {
     return this.authService.requestChangePassword(req.user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('2fa/verify-action')
+  @ApiAuthenticated()
   async verify2FAForAction(@Req() req, @Body() dto: Verify2FAActionDto) {
     return this.authService.verify2FAForAction(
       req.user.sub,
@@ -190,19 +266,22 @@ export class AuthController {
 
   @UseGuards(SuperAdminGuard)
   @Post('admins')
+  @ApiAuthenticated()
   createAdmin(@Body() dto: CreateAdminDto, @Req() req) {
     return this.authService.createAdmin(dto, req.user);
   }
 
   @UseGuards(SuperAdminGuard)
   @Post('admins/:id/approve')
-  approveAdmin(@Param('id') id: number, @Req() req) {
-    return this.authService.approveAdmin(+id, req.user);
+  @ApiAuthenticated()
+  approveAdmin(@Param('id') id: string, @Req() req) {
+    return this.authService.approveAdmin(id, req.user);
   }
 
   @UseGuards(SuperAdminGuard)
   @Post('admins/:id/suspend')
-  suspendAdmin(@Param('id') id: number, @Req() req) {
-    return this.authService.suspendAdmin(+id, req.user);
+  @ApiAuthenticated()
+  suspendAdmin(@Param('id') id: string, @Req() req) {
+    return this.authService.suspendAdmin(id, req.user);
   }
 }

@@ -15,7 +15,7 @@ export class ProductVariantAttributeService extends BaseService<ProductVariantAt
 
   findByVariant(variantId: number) {
     return this.repo.find({
-      where: { variant: { id: variantId } },
+      where: { variant: { id: String(variantId) } },
       relations: ['attribute', 'value'],
     });
   }

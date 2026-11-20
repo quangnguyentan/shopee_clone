@@ -5,9 +5,17 @@ import { Product } from 'src/product/entities/product.entity';
 import { ProductVariantService } from './product-variant.service';
 import { ProductVariantController } from './product-variant.controller';
 import { Session } from '@/session/entities/session.entity';
+import { InventoryReservation } from '@/inventory-reservation/entities/inventory-reservation.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ProductVariant, Product, Session])],
+  imports: [
+    TypeOrmModule.forFeature([
+      ProductVariant,
+      Product,
+      Session,
+      InventoryReservation,
+    ]),
+  ],
   controllers: [ProductVariantController],
   providers: [ProductVariantService],
   exports: [ProductVariantService],

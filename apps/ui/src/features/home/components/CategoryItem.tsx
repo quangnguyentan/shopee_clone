@@ -2,12 +2,16 @@ import { Category } from "@/src/common/types/category.type";
 import { Card, CardContent } from "@/src/components/ui/card";
 import Image from "next/image";
 import { getAssetUrl } from "@/src/lib/assets";
+import { useNavigate } from "@/src/common/constants/navigate.constant";
 
 export const CategoryItem = ({ category }: { category: Category }) => {
   const imageUrl = getAssetUrl(category.imageUrl ?? undefined);
-
+  const { push } = useNavigate();
+  const handleClick = () => {
+    push(`/${category.slug}`);
+  }
   return (
-    <Card className="border-none shadow-none !p-0">
+    <Card className="border-none shadow-none !p-0" onClick={handleClick}>
       <CardContent
         className="flex flex-col items-center justify-center h-40 gap-3 
         border border-gray-100 hover:shadow-md cursor-pointer !p-0"
@@ -29,6 +33,6 @@ export const CategoryItem = ({ category }: { category: Category }) => {
           {category.name}
         </p>
       </CardContent>
-    </Card>
+    </Card >
   );
 };

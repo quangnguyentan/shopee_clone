@@ -3,6 +3,9 @@ import { CartRecommendationsDto } from './dto/cart-recommendations.dto';
 import { KeywordRecommendationQueryDto } from './dto/keyword-recommendation-query.dto';
 import { RecommendationClient } from './recommendation.client';
 
+import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+
+@ApiControllerDocs('Recommendations')
 @Controller('recommendations')
 export class RecommendationController {
   constructor(private readonly recommendations: RecommendationClient) {}
