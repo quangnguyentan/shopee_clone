@@ -1,5 +1,6 @@
-@import "tailwindcss";
-@config "../../tailwind.config.js";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --header-height: 119px;
