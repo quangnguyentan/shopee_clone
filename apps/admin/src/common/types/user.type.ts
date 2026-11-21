@@ -7,27 +7,21 @@ export interface User {
 
   email: string;
 
-  password: string;
-
   name: string;
 
-  phone: string;
+  phone?: string;
 
-  avatar: string;
+  avatar?: string;
 
   role: Role;
 
-  two_factor_enabled: boolean;
+  status: "PENDING" | "ACTIVE" | "SUSPENDED";
 
-  two_factor_secret: string;
+  two_factor_enabled?: boolean;
 
-  shop: Shop;
+  shop?: Shop;
 
-  orders: [];
+  created_at: Date | string;
 
-  created_at: Date;
-
-  updated_at: Date;
-
-  sessionId: string;
+  updated_at?: Date | string;
 }

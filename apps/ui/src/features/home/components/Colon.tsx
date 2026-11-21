@@ -1,5 +1,7 @@
 "use client";
 
 export const Colon = () => (
-  <span className="px-[2px] text-sm font-bold text-black">:</span>
+  <span className="inline-flex h-6 w-2 items-center justify-center text-sm font-bold leading-none text-[#222]">
+    :
+  </span>
 );

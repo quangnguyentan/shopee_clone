@@ -1,4 +1,7 @@
-import { useGetAllProductQuery } from "@/common/api/product.api";
+import {
+  useDeleteProductMutation,
+  useGetAllProductQuery,
+} from "@/common/api/product.api";
 import type { Product } from "@/common/types/product.type";
 import { getAssetUrl } from "@/common/utils/assets";
 import { convertDay } from "@/common/utils/convertDay";
@@ -6,6 +9,7 @@ import { Image } from "antd";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { message, Modal } from "antd";
 
 type ToolbarAction = {
   key: string;
@@ -26,7 +30,11 @@ const useTableData = () => {
     setLimit(l);
   };
 
-  const { data: productsData, isLoading, isFetching } = useGetAllProductQuery();
+  const { data: productsData, isLoading, isFetching } = useGetAllProductQuery({
+    page,
+    limit,
+  });
+  const [deleteProduct] = useDeleteProductMutation();
   const data = productsData?.items ?? [];
   const total = productsData?.total ?? 0;
 
@@ -40,8 +48,26 @@ const useTableData = () => {
   }, [selectedRowKeys, navigate]);
 
   const handleBulkDelete = useCallback(() => {
-    console.log("Delete products:", selectedRowKeys);
-  }, [selectedRowKeys]);
+    Modal.confirm({
+      title: `Deactivate ${selectedRowKeys.length} product(s)?`,
+      content: "Deactivated products will no longer be visible to buyers.",
+      okText: "Deactivate",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await Promise.all(
+            selectedRowKeys.map((key) =>
+              deleteProduct(String(key)).unwrap(),
+            ),
+          );
+          setSelectedRowKeys([]);
+          message.success("Product(s) deactivated");
+        } catch {
+          message.error("Could not deactivate the selected product(s)");
+        }
+      },
+    });
+  }, [deleteProduct, selectedRowKeys]);
 
   const columns = useMemo(
     () => [
@@ -120,9 +146,6 @@ const useTableData = () => {
     onChange: (keys) => {
       setSelectedRowKeys(keys);
     },
-    getCheckboxProps: (record) => ({
-      disabled: record.status === "inactive",
-    }),
   };
 
   const toolbarActions = useMemo<ToolbarAction[]>(() => {

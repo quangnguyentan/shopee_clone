@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getEnv } from "./env.client";
-import { AUTH_SCOPE } from "../constants";
+import { getAuthScope } from "../constants";
 
 const env = getEnv();
 
@@ -9,7 +9,10 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-api.defaults.headers.common["x-auth-scope"] = AUTH_SCOPE;
+api.interceptors.request.use((config) => {
+  config.headers["x-auth-scope"] = getAuthScope();
+  return config;
+});
 
 declare module "axios" {
   export interface AxiosRequestConfig {

@@ -1,0 +1,104 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: shopee_clone
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shopee_clone"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+
+  recommendation-service:
+    build:
+      context: .
+      dockerfile: apps/recommendation-service/Dockerfile
+    environment:
+      DATABASE_URL: ${RECOMMENDATION_DATABASE_URL:-postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:-local-dev-only}@postgres:5432/shopee_clone}
+    ports:
+      - "${RECOMMENDATION_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-local-dev-only}@postgres:5432/shopee_clone}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-access-secret-change-me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local-refresh-secret-change-me}
+      JWT_ACTION_SECRET: ${JWT_ACTION_SECRET:-local-action-secret-change-me}
+      BUYER_ENV: ${BUYER_ENV:-http://localhost:3000}
+      ADMIN_ENV: ${ADMIN_ENV:-http://localhost:8081}
+      RECOMMENDATION_SERVICE_URL: http://recommendation-service:8000
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      recommendation-service:
+        condition: service_started
+
+  assets:
+    build:
+      context: .
+      dockerfile: apps/assets/Dockerfile
+    environment:
+      NODE_ENV: development
+      PORT: 8082
+      BUYER_ENV: ${BUYER_ENV:-http://localhost:3000}
+      ADMIN_ENV: ${ADMIN_ENV:-http://localhost:8081}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+    ports:
+      - "${ASSETS_PORT:-8082}:8082"
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_PUBLIC_API_URL: ${VITE_PUBLIC_API_URL:-http://localhost:8080}
+        VITE_PUBLIC_SOCKET_URL: ${VITE_PUBLIC_SOCKET_URL:-http://localhost:8080}
+        VITE_ASSET_URL: ${VITE_ASSET_URL:-http://localhost:8082}
+        VITE_NODE_ENV: production
+    ports:
+      - "${ADMIN_PORT:-8081}:8080"
+    depends_on:
+      - api
+      - assets
+
+  ui:
+    build:
+      context: .
+      dockerfile: apps/ui/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:8080}
+        NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${NEXT_PUBLIC_RECAPTCHA_SITE_KEY:-local-development-site-key}
+    ports:
+      - "${UI_PORT:-3000}:8080"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:

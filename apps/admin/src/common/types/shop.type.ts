@@ -4,7 +4,7 @@ import type { User } from "./user.type";
 export interface Shop {
   id: A;
 
-  user: User;
+  user: Pick<User, "id" | "email" | "name">;
 
   name: string;
 

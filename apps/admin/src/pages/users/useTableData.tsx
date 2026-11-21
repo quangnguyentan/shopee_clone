@@ -1,9 +1,13 @@
-import { useGetAllUsersQuery } from "@/common/api/user.api";
+import {
+  useDeleteUserMutation,
+  useGetAllUsersQuery,
+} from "@/common/api/user.api";
 import type { User } from "@/common/types/user.type";
 import { convertDay } from "@/common/utils/convertDay";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { message, Modal } from "antd";
 
 type ToolbarAction = {
   key: string;
@@ -24,7 +28,11 @@ const useTableData = () => {
     setLimit(l);
   };
 
-  const { data: userData, isLoading, isFetching } = useGetAllUsersQuery();
+  const { data: userData, isLoading, isFetching } = useGetAllUsersQuery({
+    page,
+    limit,
+  });
+  const [deleteUser] = useDeleteUserMutation();
   const data = userData?.items ?? [];
   const total = userData?.total ?? 0;
 
@@ -38,8 +46,24 @@ const useTableData = () => {
   }, [selectedRowKeys, navigate]);
 
   const handleBulkDelete = useCallback(() => {
-    console.log("Delete users:", selectedRowKeys);
-  }, [selectedRowKeys]);
+    Modal.confirm({
+      title: `Delete ${selectedRowKeys.length} buyer account(s)?`,
+      content: "Seller accounts must be suspended rather than deleted.",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await Promise.all(
+            selectedRowKeys.map((key) => deleteUser(String(key)).unwrap()),
+          );
+          setSelectedRowKeys([]);
+          message.success("Buyer accounts deleted");
+        } catch {
+          message.error("Could not delete the selected accounts");
+        }
+      },
+    });
+  }, [deleteUser, selectedRowKeys]);
 
   const columns = useMemo(
     () => [
@@ -62,7 +86,7 @@ const useTableData = () => {
         title: "Phone",
         dataIndex: "phone",
         searchable: true,
-        sorter: (a: A, b: A) => a.phone.localeCompare(b.phone),
+        sorter: (a: A, b: A) => (a.phone ?? "").localeCompare(b.phone ?? ""),
         render: (value: string) => value || "N/A",
       },
       {
@@ -71,6 +95,13 @@ const useTableData = () => {
         dataIndex: "role",
         searchable: true,
         sorter: (a: A, b: A) => a.role.localeCompare(b.role),
+      },
+      {
+        width: 160,
+        title: "Status",
+        dataIndex: "status",
+        searchable: true,
+        render: (value: string) => value.toLowerCase(),
       },
       {
         width: 200,
@@ -95,6 +126,9 @@ const useTableData = () => {
     onChange: (keys) => {
       setSelectedRowKeys(keys);
     },
+    getCheckboxProps: (record) => ({
+      disabled: record.role !== "buyer",
+    }),
   };
 
   const toolbarActions = useMemo<ToolbarAction[]>(() => {

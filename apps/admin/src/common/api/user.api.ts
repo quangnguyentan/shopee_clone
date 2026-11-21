@@ -1,6 +1,12 @@
 import { baseApi, type PaginatedResponse } from "../config/baseApi";
 import type { User } from "../types/user.type";
 
+type UserQuery = {
+  page?: number;
+  limit?: number;
+  role?: "buyer" | "seller" | "admin";
+};
+
 export const userApi = baseApi
   .enhanceEndpoints({
     addTagTypes: ["User"],
@@ -15,30 +21,47 @@ export const userApi = baseApi
         }),
         providesTags: ["User"],
       }),
-      getAllUsers: builder.query<PaginatedResponse<User>, void>({
-        query: () => ({
+      getAllUsers: builder.query<PaginatedResponse<User>, UserQuery | void>({
+        query: (params) => ({
           url: `/user`,
+          method: "GET",
+          params: params || undefined,
+        }),
+        providesTags: ["User"],
+      }),
+      getUserById: builder.query<User, string | number>({
+        query: (id) => ({
+          url: `/user/${id}`,
           method: "GET",
         }),
         providesTags: ["User"],
       }),
-      createUser: builder.mutation<User, Partial<User>>({
+      createUser: builder.mutation<
+        User,
+        Partial<User> & { password?: string }
+      >({
         query: (body) => ({
           url: `/user`,
           method: "POST",
-          body,
+          data: body,
         }),
         invalidatesTags: ["User"],
       }),
-      updateUser: builder.mutation<User, { id: number; body: Partial<User> }>({
+      updateUser: builder.mutation<
+        User,
+        { id: string | number; body: Partial<User> }
+      >({
         query: ({ id, body }) => ({
           url: `/user/${id}`,
           method: "PATCH",
-          body,
+          data: body,
         }),
         invalidatesTags: ["User"],
       }),
-      deleteUser: builder.mutation<{ success: boolean; id: number }, number>({
+      deleteUser: builder.mutation<
+        { success: boolean; id: string },
+        string | number
+      >({
         query: (id) => ({
           url: `/user/${id}`,
           method: "DELETE",
@@ -51,6 +74,7 @@ export const userApi = baseApi
 export const {
   useGetMeQuery,
   useGetAllUsersQuery,
+  useGetUserByIdQuery,
   useCreateUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,

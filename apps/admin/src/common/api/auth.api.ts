@@ -1,7 +1,7 @@
 import { baseApi } from "@/common/config/baseApi";
 import { logout } from "../storage/auth.slice";
 import { clearMe } from "../storage/user.slice";
-import { AUTH_SCOPE } from "../constants";
+import { getAuthScope } from "../constants";
 export const authApi = baseApi
   .enhanceEndpoints({
     addTagTypes: ["Auth"],
@@ -11,7 +11,6 @@ export const authApi = baseApi
     endpoints: (builder) => ({
       register: builder.mutation<A, { email: string; password: string }>({
         query: (body) => {
-          console.log(body);
           return {
             url: "auth/register",
             method: "POST",
@@ -22,7 +21,7 @@ export const authApi = baseApi
       login: builder.mutation<A, { identifier: string; password: string }>({
         query: (body) => {
           return {
-            url: `auth/${AUTH_SCOPE}/login`,
+            url: `auth/${getAuthScope()}/login`,
             method: "POST",
             data: body,
           };
@@ -45,7 +44,10 @@ export const authApi = baseApi
         },
       }),
       refresh: builder.mutation<A, void>({
-        query: () => ({ url: `auth/${AUTH_SCOPE}/refresh`, method: "POST" }),
+        query: () => ({
+          url: `auth/${getAuthScope()}/refresh`,
+          method: "POST",
+        }),
       }),
     }),
   });

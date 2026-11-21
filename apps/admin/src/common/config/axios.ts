@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { refreshApi } from "./refreshApi";
 import { api, pageUnloading } from "./api";
-import { AUTH_SCOPE } from "../constants";
+import { getAuthScope } from "../constants";
 
 /* ---------- refresh queue ---------- */
 let appStore: A;
@@ -24,7 +24,11 @@ api.interceptors.response.use(
     if (!original || !appStore) return Promise.reject(error);
     if (pageUnloading) return Promise.reject(error);
 
-    if (original.url?.includes(`/auth/${AUTH_SCOPE}/refresh`)) {
+    if (
+      original.url?.includes(`/auth/${getAuthScope()}/refresh`) ||
+      original.url?.includes(`/auth/${getAuthScope()}/login`) ||
+      original.url?.includes("/auth/logout")
+    ) {
       return Promise.reject(error);
     }
 

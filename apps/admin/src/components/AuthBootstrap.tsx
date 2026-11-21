@@ -14,6 +14,7 @@ import { clearMe, setMe } from "@/common/storage/user.slice";
 import { persistor } from "@/common/storage";
 import { useSingleTabGuard } from "@/common/hooks/useSingleTabGuard";
 import Loading from "./Loading";
+import { setAuthScope } from "@/common/constants";
 
 export default function AuthBootstrap({
   children,
@@ -39,10 +40,14 @@ export default function AuthBootstrap({
         if (!authenticated) throw new Error();
 
         dispatch(setMe({ user, sessionId }));
+        if (user.role === "seller" || user.role === "admin") {
+          setAuthScope(user.role);
+        }
         dispatch(loginSuccess());
       } catch {
         dispatch(clearMe());
         dispatch(logout());
+        setAuthScope("admin");
       } finally {
         dispatch(finishBootstrap());
       }

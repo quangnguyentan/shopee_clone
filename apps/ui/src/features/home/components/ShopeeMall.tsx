@@ -16,9 +16,11 @@ import { IoIosArrowForward } from "@/src/components/shared/Icon";
 import Image from "next/image";
 import { useGetShopeeMallActiveQuery } from "@/src/common/api/shop.api";
 import { getAssetUrl } from "@/src/lib/assets";
+import { chunkArray } from "../hooks/useChunkArray";
 
 const ShopeeMall = () => {
   const { data: shops = [] } = useGetShopeeMallActiveQuery(16);
+  const pages = chunkArray(shops, 8);
 
   return (
     <div className="flex flex-col gap-2 px-2 bg-white">
@@ -46,7 +48,7 @@ const ShopeeMall = () => {
         </div>
       </div>
 
-      <div className="flex h-[470px]">
+      <div className="flex h-[460px]">
         <div className="w-1/3 h-full">
           <Image
             src={deal_banner}
@@ -55,35 +57,46 @@ const ShopeeMall = () => {
           />
         </div>
 
-        <div className="w-2/3">
+        <div className="h-full w-2/3">
           <Carousel
+            className="h-full"
             opts={{
               align: "start",
-              slidesToScroll: 4,
+              slidesToScroll: 1,
             }}
           >
-            <CarouselContent>
-              {shops.map((shop) => (
-                <CarouselItem key={shop.id} className="basis-1/4 p-2">
-                  <Card className="border-none shadow-none hover:shadow-md cursor-pointer">
-                    <CardContent className="p-2 flex flex-col items-center gap-2">
-                      <div className="w-[180px] h-[216px] overflow-hidden rounded-sm bg-white">
-                        <Image
-                          src={getAssetUrl(shop.logo) ?? ""}
-                          alt={shop.name}
-                          width={180}
-                          height={216}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <span
-                        className="text-red-primary text-lg"
-                        dangerouslySetInnerHTML={{
-                          __html: shop.description ?? "",
-                        }}
-                      />
-                    </CardContent>
-                  </Card>
+            <CarouselContent className="h-full">
+              {pages.map((page, pageIndex) => (
+                <CarouselItem
+                  key={`page-${pageIndex}`}
+                  className="h-full !basis-full !p-0"
+                >
+                  <div className="grid h-full grid-cols-4 grid-rows-2 gap-2 p-2">
+                    {page.map((shop) => (
+                      <Card
+                        key={shop.id}
+                        className="min-w-0 cursor-pointer gap-0 border-none p-0 shadow-none hover:shadow-md"
+                      >
+                        <CardContent className="flex h-full flex-col items-center gap-1 p-1">
+                          <div className="relative h-[170px] w-full overflow-hidden rounded-sm bg-white">
+                            <Image
+                              src={getAssetUrl(shop.logo) ?? ""}
+                              alt={shop.name}
+                              fill
+                              sizes="16vw"
+                              className="object-contain"
+                            />
+                          </div>
+                          <span
+                            className="line-clamp-2 min-h-10 text-center text-base leading-5 text-red-primary"
+                            dangerouslySetInnerHTML={{
+                              __html: shop.description ?? "",
+                            }}
+                          />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </CarouselItem>
               ))}
             </CarouselContent>

@@ -1,5 +1,6 @@
 import {
   Button,
+  Alert,
   Form,
   Input,
   Select,
@@ -30,6 +31,7 @@ import ProductVariantSection from "./ProductVariantSection";
 import type { ProductFormValues } from "../types";
 import { useGetAllCategoriesQuery } from "@/common/api/category.api";
 import { buildCategoryTree } from "@/pages/category/utils/helper";
+import { useAppSelector } from "@/common/hooks/useAppSelector";
 import Editor, { type QuillEditorRef } from "@/components/Editor";
 import { uploadImagesInHtml } from "../../../common/utils/uploadImagesInHtml";
 import {
@@ -44,13 +46,17 @@ const FormPage = () => {
   const [form] = Form.useForm<ProductFormValues>();
   const editorRef = useRef<QuillEditorRef>(null);
   const navigate = useNavigate();
+  const isSeller = useAppSelector((state) => state.user.me?.role === "seller");
   const hasVariants = Form.useWatch("has_variants", form);
 
   const { data: product, isLoading } = useGetProductByIdQuery(
     { id },
     { skip: !isEdit },
   );
-  const { data: shops, isLoading: isLoadingShop } = useGetAllShopsQuery();
+  const { data: shops, isLoading: isLoadingShop } = useGetAllShopsQuery({
+    page: 1,
+    limit: 100,
+  });
   const { data: categories, isLoading: isLoadingCategory } =
     useGetAllCategoriesQuery();
   const [createProduct, { isLoading: isCreateProduct }] =
@@ -101,6 +107,12 @@ const FormPage = () => {
       });
     }
   }, [hasVariants, isEdit]);
+
+  useEffect(() => {
+    if (!isEdit && isSeller && shops?.items?.[0]) {
+      form.setFieldValue("shop_id", shops.items[0].id);
+    }
+  }, [form, isEdit, isSeller, shops]);
   const uploadDescription = useCallback(
     async (html: string) =>
       uploadImagesInHtml(html, async (file) => {
@@ -231,6 +243,16 @@ const FormPage = () => {
   };
 
   if (isLoading || isLoadingShop || isLoadingCategory) return <Loading />;
+  if (isSeller && !shops?.items?.length) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        message="Your seller account does not have a shop yet."
+        description="Contact an administrator to create and activate your shop before adding products."
+      />
+    );
+  }
   return (
     <Form
       form={form}
@@ -275,20 +297,26 @@ const FormPage = () => {
         />
       </Form.Item>
 
-      <Form.Item
-        label="Shop"
-        name="shop_id"
-        rules={[{ required: true, message: "Please select shop" }]}
-      >
-        <Select
-          loading={isLoadingShop}
-          options={shops?.items?.map((s) => ({
-            label: s.name,
-            value: s.id,
-          }))}
-          size="large"
-        />
-      </Form.Item>
+      {isSeller ? (
+        <Form.Item name="shop_id" hidden rules={[{ required: true }]}>
+          <Input />
+        </Form.Item>
+      ) : (
+        <Form.Item
+          label="Shop"
+          name="shop_id"
+          rules={[{ required: true, message: "Please select shop" }]}
+        >
+          <Select
+            loading={isLoadingShop}
+            options={shops?.items?.map((s) => ({
+              label: s.name,
+              value: s.id,
+            }))}
+            size="large"
+          />
+        </Form.Item>
+      )}
 
       <Form.Item
         label="Has variants"

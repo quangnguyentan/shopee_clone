@@ -16,7 +16,7 @@ export class BaseService<T extends BaseEntity> {
     options?: Omit<FindManyOptions<T>, 'take' | 'skip'>,
   ) {
     const page = query?.page ?? 1;
-    const limit = query?.limit ?? 10;
+    const limit = Math.min(query?.limit ?? 10, 100);
     const skip = (page - 1) * limit;
 
     const [items, total] = await this.repo.findAndCount({

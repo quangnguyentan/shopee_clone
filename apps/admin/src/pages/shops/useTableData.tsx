@@ -1,22 +1,32 @@
-import { useGetAllShopsQuery } from "@/common/api/shop.api";
+import {
+  useDeleteShopMutation,
+  useGetAllShopsQuery,
+} from "@/common/api/shop.api";
 import type { Shop } from "@/common/types/shop.type";
 import { convertDay } from "@/common/utils/convertDay";
 import type { ToolbarAction } from "@/common/utils/mixins";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { message, Modal } from "antd";
+import { useAppSelector } from "@/common/hooks/useAppSelector";
 
 const useTableData = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const navigate = useNavigate();
+  const isSeller = useAppSelector((state) => state.user.me?.role === "seller");
   const onPageChange = (p: number, l: number) => {
     setPage(p);
     setLimit(l);
   };
 
-  const { data: shopsData, isLoading, isFetching } = useGetAllShopsQuery();
+  const { data: shopsData, isLoading, isFetching } = useGetAllShopsQuery({
+    page,
+    limit,
+  });
+  const [deleteShop] = useDeleteShopMutation();
   const data = shopsData?.items ?? [];
   const total = shopsData?.total ?? 0;
 
@@ -31,8 +41,24 @@ const useTableData = () => {
   }, [selectedRowKeys, navigate]);
 
   const handleBulkDelete = useCallback(() => {
-    console.log("Delete shops:", selectedRowKeys);
-  }, [selectedRowKeys]);
+    Modal.confirm({
+      title: `Suspend ${selectedRowKeys.length} shop(s)?`,
+      content: "Products in the selected shops will also be deactivated.",
+      okText: "Suspend",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await Promise.all(
+            selectedRowKeys.map((key) => deleteShop(String(key)).unwrap()),
+          );
+          setSelectedRowKeys([]);
+          message.success("Shop(s) suspended");
+        } catch {
+          message.error("Could not suspend the selected shop(s)");
+        }
+      },
+    });
+  }, [deleteShop, selectedRowKeys]);
 
   const columns = useMemo(
     () => [
@@ -90,20 +116,17 @@ const useTableData = () => {
     onChange: (keys) => {
       setSelectedRowKeys(keys);
     },
-    getCheckboxProps: (record) => ({
-      disabled: record.is_active === false,
-    }),
   };
 
   const toolbarActions = useMemo<ToolbarAction[]>(() => {
-    const actions: ToolbarAction[] = [
-      {
+    const actions: ToolbarAction[] = isSeller
+      ? []
+      : [{
         key: "create",
         label: "Create",
         onClick: () => navigate("/shops/create"),
         type: "primary",
-      },
-    ];
+      }];
     if (canEdit) {
       actions.push({
         key: "edit",
@@ -128,6 +151,7 @@ const useTableData = () => {
     navigate,
     canEdit,
     handleEdit,
+    isSeller,
   ]);
 
   return {

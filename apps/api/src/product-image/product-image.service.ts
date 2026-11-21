@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BaseService } from '@/base/base.service';
@@ -7,6 +11,8 @@ import { Product } from 'src/product/entities/product.entity';
 import { join } from 'path';
 import { unlink } from 'fs/promises';
 import { PaginationDto } from '@/base/base.dto';
+
+type ProductImageManager = { userId: number; role: 'admin' | 'seller' };
 
 @Injectable()
 export class ProductImageService extends BaseService<ProductImage> {
@@ -41,12 +47,14 @@ export class ProductImageService extends BaseService<ProductImage> {
     product_id: number;
     url: string;
     is_primary?: boolean;
-  }) {
+  }, user: ProductImageManager) {
     const product = await this.productRepo.findOne({
       where: { id: String(dto.product_id) },
+      relations: ['shop', 'shop.user'],
     });
 
     if (!product) throw new NotFoundException('Product not found');
+    this.assertOwner(product, user);
 
     // nếu set primary → reset ảnh cũ
     if (dto.is_primary) {
@@ -69,13 +77,14 @@ export class ProductImageService extends BaseService<ProductImage> {
     });
   }
 
-  async setPrimary(imageId: number) {
+  async setPrimary(imageId: string, user: ProductImageManager) {
     const image = await this.repo.findOne({
-      where: { id: String(imageId) },
-      relations: ['product'],
+      where: { id: imageId },
+      relations: ['product', 'product.shop', 'product.shop.user'],
     });
 
     if (!image) throw new NotFoundException('Image not found');
+    this.assertOwner(image.product, user);
 
     await this.repo.update({ product: { id: image.product.id } } as any, {
       is_primary: false,
@@ -83,6 +92,18 @@ export class ProductImageService extends BaseService<ProductImage> {
 
     image.is_primary = true;
     return this.repo.save(image);
+  }
+
+  private assertOwner(
+    product: Product & { shop?: { user?: { id: string } } },
+    user: ProductImageManager,
+  ) {
+    if (
+      user.role === 'seller' &&
+      product.shop?.user?.id !== String(user.userId)
+    ) {
+      throw new ForbiddenException('No permission to manage this product image');
+    }
   }
   async deleteImage(imageId: number) {
     const image = await this.repo.findOne({

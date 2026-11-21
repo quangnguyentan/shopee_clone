@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, In, Repository } from 'typeorm';
 import { BaseService } from '@/base/base.service';
@@ -19,6 +23,8 @@ import { Shop } from '@/shop/entities/shop.entity';
 import { slugify } from '@/common/utils/slug.util';
 import { createProductVariantSignature } from '@/common/utils/product-variant-signature.util';
 
+type ProductManager = { userId: number; role: 'admin' | 'seller' };
+
 @Injectable()
 export class ProductService extends BaseService<Product> {
   constructor(
@@ -28,19 +34,55 @@ export class ProductService extends BaseService<Product> {
     super(repo);
   }
 
-  async createProduct(userId: number, dto: CreateProductDto) {
-    const slug = await this.createProductSlug(dto.shop_id, dto.name);
+  async createProduct(user: ProductManager, dto: CreateProductDto) {
+    const shop = await this.getManagedShop(user, dto.shop_id);
+    const slug = await this.createProductSlug(shop.id, dto.name);
+    const { category_id, ...productFields } = dto;
     return this.create({
-      ...dto,
-      shop_id: String(dto.shop_id),
+      ...productFields,
+      category_id: String(category_id),
+      shop_id: shop.id,
       slug,
       is_active: dto.status === 'active',
-      shop: { id: String(dto.shop_id) } as any,
+      shop,
       description: dto.description,
     });
   }
 
-  private async createProductSlug(shopId: number, name: string) {
+  private async getManagedShop(user: ProductManager, requestedShopId?: number) {
+    if (user.role === 'admin') {
+      if (!requestedShopId) throw new NotFoundException('Shop not found');
+      const shop = await this.repo.manager.findOne(Shop, {
+        where: { id: String(requestedShopId) },
+      });
+      if (!shop) throw new NotFoundException('Shop not found');
+      return shop;
+    }
+
+    const shop = await this.repo.manager.findOne(Shop, {
+      where: { user: { id: String(user.userId) } },
+    });
+    if (!shop) throw new ForbiddenException('Seller has no shop');
+    return shop;
+  }
+
+  private async assertProductAccess(
+    productId: number,
+    user: ProductManager,
+    manager = this.repo.manager,
+  ) {
+    const product = await manager.findOne(Product, {
+      where: { id: String(productId) },
+      relations: ['shop', 'shop.user'],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (user.role === 'seller' && product.shop.user.id !== String(user.userId)) {
+      throw new ForbiddenException('No permission to access this product');
+    }
+    return product;
+  }
+
+  private async createProductSlug(shopId: string | number, name: string) {
     const baseSlug = slugify(name);
     let slug = baseSlug;
     let suffix = 2;
@@ -57,18 +99,40 @@ export class ProductService extends BaseService<Product> {
 
   async updateProduct(
     productId: number,
-    userId: number,
+    user: ProductManager,
     dto: UpdateProductDto,
   ) {
-    return this.updateById(productId, {
-      ...dto,
-      shop_id: dto.shop_id === undefined ? undefined : String(dto.shop_id),
-      description: dto.description ?? undefined,
+    const product = await this.assertProductAccess(productId, user);
+    const { shop_id, category_id, ...updates } = dto;
+    const targetShop =
+      user.role === 'admin' && shop_id !== undefined
+        ? await this.getManagedShop(user, shop_id)
+        : product.shop;
+
+    Object.assign(product, updates, {
+      shop: targetShop,
+      shop_id: targetShop.id,
+      category_id:
+        category_id === undefined
+          ? product.category_id
+          : String(category_id),
+      is_active:
+        dto.status === undefined ? product.is_active : dto.status === 'active',
     });
+    return this.repo.save(product);
   }
 
-  async deleteProduct(productId: number, userId: number) {
-    return this.deleteById(productId);
+  async deleteProduct(productId: number, user: ProductManager) {
+    await this.assertProductAccess(productId, user);
+    await this.repo.manager.transaction(async (manager) => {
+      await manager.update(
+        Product,
+        { id: String(productId) },
+        { status: 'inactive', is_active: false },
+      );
+      await manager.softDelete(Product, String(productId));
+    });
+    return { success: true, id: String(productId) };
   }
 
   findByShop(shopId: number) {
@@ -78,9 +142,13 @@ export class ProductService extends BaseService<Product> {
       order: { id: 'DESC' },
     });
   }
-  async findAll(query?: PaginationDto) {
+  async findManagedProducts(query?: PaginationDto, user?: ProductManager) {
     return super.findAll(query, {
       select: ['id', 'name', 'price_min', 'price_max', 'stock', 'status'],
+      where:
+        user?.role === 'seller'
+          ? { shop: { user: { id: String(user.userId) } } }
+          : undefined,
       relations: [
         'shop',
         'images',
@@ -90,11 +158,14 @@ export class ProductService extends BaseService<Product> {
       ],
     });
   }
-  async findOneById(id: number) {
-    return this.repo.findOne({
+  async findOneById(id: number, user?: ProductManager) {
+    if (user) await this.assertProductAccess(id, user);
+    const product = await this.repo.findOne({
       where: { id: String(id) },
       relations: ['shop', 'images', 'variants', 'category'],
     });
+    if (!product) throw new NotFoundException('Product not found');
+    return product;
   }
 
   async findAllView(query?: PaginationDto) {
@@ -176,7 +247,7 @@ export class ProductService extends BaseService<Product> {
     };
   }
 
-  async createFullProduct(userId: number, dto: CreateProductWithVariantDto) {
+  async createFullProduct(user: ProductManager, dto: CreateProductWithVariantDto) {
     return this.repo.manager.transaction(async (manager) => {
       const combinations = generateCombinations(dto.attributes);
 
@@ -187,15 +258,23 @@ export class ProductService extends BaseService<Product> {
       const prices = dto.variants.map((v) => v.price);
       const stocks = dto.variants.map((v) => v.stock);
 
-      const shop = await manager.findOneByOrFail(Shop, {
-        id: String(dto.shop_id),
-      });
+      const shop =
+        user.role === 'admin'
+          ? await manager.findOne(Shop, { where: { id: String(dto.shop_id) } })
+          : await manager.findOne(Shop, {
+              where: { user: { id: String(user.userId) } },
+            });
+      if (!shop) {
+        throw new ForbiddenException(
+          user.role === 'seller' ? 'Seller has no shop' : 'Shop not found',
+        );
+      }
 
       // 1️⃣ CREATE PRODUCT
       const product = await manager.save(
         manager.create(Product, {
           name: dto.name,
-          slug: await this.createProductSlug(dto.shop_id, dto.name),
+          slug: await this.createProductSlug(shop.id, dto.name),
           is_active: dto.status === 'active',
           description: dto.description,
           status: dto.status,
@@ -338,16 +417,22 @@ export class ProductService extends BaseService<Product> {
 
   async updateFullProduct(
     productId: number,
-    userId: number,
+    user: ProductManager,
     dto: CreateProductWithVariantDto,
   ) {
     return this.repo.manager.transaction(async (manager) => {
       const product = await manager.findOne(Product, {
         where: { id: String(productId) },
-        relations: ['variants', 'shop'],
+        relations: ['variants', 'shop', 'shop.user'],
       });
 
       if (!product) throw new Error('Product not found');
+      if (
+        user.role === 'seller' &&
+        product.shop.user.id !== String(user.userId)
+      ) {
+        throw new ForbiddenException('No permission to update this product');
+      }
 
       const combinations = generateCombinations(dto.attributes);
 

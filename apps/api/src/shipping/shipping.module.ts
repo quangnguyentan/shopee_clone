@@ -3,9 +3,10 @@ import { ShippingService } from './shipping.service';
 import { ShippingController } from './shipping.controller';
 import { Shipping } from './entities/shipping.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Session } from '@/session/entities/session.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Shipping])],
+  imports: [TypeOrmModule.forFeature([Shipping, Session])],
   controllers: [ShippingController],
   providers: [ShippingService],
 })

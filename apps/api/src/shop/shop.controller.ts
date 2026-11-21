@@ -8,16 +8,18 @@ import {
   Patch,
   Post,
   Query,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ShopService } from './shop.service';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { BaseController } from '@/base/base.controller';
 import { Shop } from './entities/shop.entity';
-import { Auth } from '@/common/decorators/auth.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { AuthRole } from '@/common/decorators/auth-role.decorator';
+import { OptionalAuth } from '@/common/decorators/optional-auth.decorator';
 import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
+import { PaginationDto } from '@/base/base.dto';
 
 import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
 
@@ -33,39 +35,51 @@ export class ShopController extends BaseController<Shop> {
     return this.service.getShopeeMallActive(Number(limit));
   }
 
+  @OptionalAuth()
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query() query: PaginationDto,
+    @CurrentUser() user?: { userId: number; role: string },
+  ) {
+    return this.service.findForViewer(query, user);
   }
 
+  @OptionalAuth()
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOneById(+id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() user?: { userId: number; role: string },
+  ) {
+    return this.service.findOneForViewer(id, user);
   }
 
-  @Auth()
   @AuthRole('admin')
   @Post()
   @ApiAuthenticated()
-  createShop(@Body() dto: CreateShopDto) {
+  create(@Body() dto: CreateShopDto) {
     return this.service.createShop(dto);
   }
 
-  @Auth()
+  @AuthRole('admin', 'seller')
   @Patch(':id')
   @ApiAuthenticated()
-  updateShop(
+  update(
     @Param('id') id: string,
-    @CurrentUser() user,
     @Body() dto: UpdateShopDto,
+    @CurrentUser() user?: { userId: number; role: string },
   ) {
-    return this.service.updateShop(+id, user, dto);
+    if (!user) throw new UnauthorizedException();
+    return this.service.updateShop(id, user, dto);
   }
 
-  @Auth()
+  @AuthRole('admin', 'seller')
   @Delete(':id')
   @ApiAuthenticated()
-  deleteShop(@Param('id') id: string, @CurrentUser() user) {
-    return this.service.deleteShop(+id, user.userId);
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() user?: { userId: number; role: string },
+  ) {
+    if (!user) throw new UnauthorizedException();
+    return this.service.deleteShop(id, user);
   }
 }
