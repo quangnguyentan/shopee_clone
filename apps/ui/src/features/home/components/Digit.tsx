@@ -1,19 +1,12 @@
 "use client";
 
-import { cn } from "@/src/lib/utils";
-
 interface DigitProps {
   value: string;
 }
 
 export const Digit = ({ value }: DigitProps) => {
   return (
-    <span
-      className={cn(
-        "inline-block w-[10px] text-center font-bold text-white text-sm",
-        "animate-slide-up"
-      )}
-    >
+    <span className="inline-flex h-6 w-[11px] items-center justify-center text-sm font-bold tabular-nums leading-none text-white">
       {value}
     </span>
   );

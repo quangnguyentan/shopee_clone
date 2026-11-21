@@ -1,6 +1,8 @@
 import { baseApi, type PaginatedResponse } from "../config/baseApi";
 import type { Shop } from "../types/shop.type";
 
+type PageQuery = { page?: number; limit?: number };
+
 export const shopApi = baseApi
   .enhanceEndpoints({
     addTagTypes: ["Shop"],
@@ -8,10 +10,11 @@ export const shopApi = baseApi
   .injectEndpoints({
     overrideExisting: true,
     endpoints: (builder) => ({
-      getAllShops: builder.query<PaginatedResponse<Shop>, void>({
-        query: () => ({
+      getAllShops: builder.query<PaginatedResponse<Shop>, PageQuery | void>({
+        query: (params) => ({
           url: `/shops/`,
           method: "GET",
+          params: params || undefined,
         }),
         providesTags: ["Shop"],
       }),
@@ -22,7 +25,10 @@ export const shopApi = baseApi
         }),
         providesTags: ["Shop"],
       }),
-      createShop: builder.mutation<Shop, Partial<Shop>>({
+      createShop: builder.mutation<
+        Shop,
+        Partial<Shop> & { user_id?: number }
+      >({
         query: (body) => ({
           url: `/shops/`,
           method: "POST",
@@ -30,11 +36,21 @@ export const shopApi = baseApi
         }),
         invalidatesTags: ["Shop"],
       }),
-      updateShop: builder.mutation<Shop, { id: A; body: Partial<Shop> }>({
+      updateShop: builder.mutation<
+        Shop,
+        { id: A; body: Partial<Shop> & { user_id?: number } }
+      >({
         query: ({ id, body }) => ({
           url: `/shops/${id}`,
           method: "PATCH",
           data: body,
+        }),
+        invalidatesTags: ["Shop"],
+      }),
+      deleteShop: builder.mutation<{ affected?: number }, string | number>({
+        query: (id) => ({
+          url: `/shops/${id}`,
+          method: "DELETE",
         }),
         invalidatesTags: ["Shop"],
       }),
@@ -46,4 +62,5 @@ export const {
   useGetShopByIdQuery,
   useCreateShopMutation,
   useUpdateShopMutation,
+  useDeleteShopMutation,
 } = shopApi;

@@ -1,24 +1,23 @@
-import { Chart } from "react-chartjs-2";
-import useChartData from "./useChartData";
+import { Typography } from "antd";
+import { useAppSelector } from "@/common/hooks/useAppSelector";
 import StatCard from "./components/StatCard";
-import TopBuyer from "./components/TopBuyer";
-import TopSeller from "./components/TopSeller";
 
 export default function Home() {
-  const { data, options } = useChartData();
+  const isSeller = useAppSelector((state) => state.user.me?.role === "seller");
 
   return (
     <div className="space-y-6 w-full">
+      <div>
+        <Typography.Title level={3} className="!mb-1">
+          {isSeller ? "Seller dashboard" : "Admin dashboard"}
+        </Typography.Title>
+        <Typography.Text type="secondary">
+          {isSeller
+            ? "A live overview of your shop and fulfillment activity."
+            : "A live overview of users, shops, products, and orders."}
+        </Typography.Text>
+      </div>
       <StatCard />
-
-      <div className="bg-white rounded-xl shadow w-full">
-        <Chart type="bar" data={data} options={options} />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <TopSeller />
-        <TopBuyer />
-      </div>
     </div>
   );
 }

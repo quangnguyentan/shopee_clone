@@ -12,6 +12,8 @@ import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { PaginationDto } from '@/base/base.dto';
 import { slugify } from '@/common/utils/slug.util';
+import { User } from '@/user/entities/user.entity';
+import { Product } from '@/product/entities/product.entity';
 
 @Injectable()
 export class ShopService extends BaseService<Shop> {
@@ -22,11 +24,63 @@ export class ShopService extends BaseService<Shop> {
     super(repo);
   }
 
-  async findAll(query?: PaginationDto) {
-    return super.findAll(query, {
+  async findAllShops(query?: PaginationDto) {
+    const result = await super.findAll(query, {
       relations: ['user', 'products'],
     });
+    return { ...result, items: result.items.map((shop) => this.toSafeShop(shop)) };
   }
+
+  async findForViewer(
+    query: PaginationDto,
+    user?: { userId: number; role: string },
+  ) {
+    if (user?.role !== 'seller') return this.findAllShops(query);
+
+    const page = query?.page ?? 1;
+    const limit = Math.min(query?.limit ?? 10, 100);
+    const [items, total] = await this.repo.findAndCount({
+      where: { user: { id: String(user.userId) } },
+      relations: ['user', 'products'],
+      take: limit,
+      skip: (page - 1) * limit,
+      order: { id: 'ASC' },
+    });
+    return {
+      items: items.map((shop) => this.toSafeShop(shop)),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async findOneForViewer(
+    id: string,
+    user?: { userId: number; role: string },
+  ) {
+    const shop = await this.repo.findOne({
+      where: { id },
+      relations: ['user', 'products'],
+    });
+    if (!shop) throw new NotFoundException('Shop not found');
+    if (user?.role === 'seller' && shop.user.id !== String(user.userId)) {
+      throw new ForbiddenException('No permission to access this shop');
+    }
+    return this.toSafeShop(shop);
+  }
+
+  private toSafeShop(shop: Shop) {
+    if (!shop.user) return shop;
+    return {
+      ...shop,
+      user: {
+        id: shop.user.id,
+        name: shop.user.name,
+        email: shop.user.email,
+      },
+    };
+  }
+
   async findOneById(id: number) {
     return this.repo.findOne({
       where: { id: String(id) },
@@ -35,6 +89,13 @@ export class ShopService extends BaseService<Shop> {
   }
 
   async createShop(dto: CreateShopDto) {
+    const owner = await this.repo.manager.findOne(User, {
+      where: { id: String(dto.user_id) },
+    });
+    if (!owner || owner.role !== 'seller') {
+      throw new NotFoundException('Seller account not found');
+    }
+
     const existed = await this.repo.findOne({
       where: { user: { id: String(dto.user_id) } } as any,
     });
@@ -61,9 +122,13 @@ export class ShopService extends BaseService<Shop> {
     });
   }
 
-  async updateShop(shopId: number, user: any, dto: UpdateShopDto) {
+  async updateShop(
+    shopId: string,
+    user: { userId: number; role: string },
+    dto: UpdateShopDto,
+  ) {
     const shop = await this.repo.findOne({
-      where: { id: String(shopId) },
+      where: { id: shopId },
       relations: ['user'],
     });
 
@@ -76,28 +141,55 @@ export class ShopService extends BaseService<Shop> {
       throw new ForbiddenException('No permission');
     }
 
-    if (dto.user_id) {
-      shop.user = { id: String(dto.user_id) } as any;
-      delete (dto as any).user_id;
+    if (isAdmin && dto.user_id !== undefined) {
+      const owner = await this.repo.manager.findOne(User, {
+        where: { id: String(dto.user_id) },
+      });
+      if (!owner || owner.role !== 'seller') {
+        throw new NotFoundException('Seller account not found');
+      }
+      shop.user = owner;
+    } else if (!isAdmin && dto.user_id !== undefined) {
+      throw new ForbiddenException('Only admins can transfer shop ownership');
     }
 
-    Object.assign(shop, dto);
+    if (isAdmin) {
+      const { user_id: _userId, ...adminFields } = dto;
+      Object.assign(shop, adminFields);
+    } else {
+      Object.assign(shop, {
+        name: dto.name,
+        description: dto.description,
+        logo: dto.logo,
+      });
+    }
     return this.repo.save(shop);
   }
 
-  async deleteShop(shopId: number, userId: number) {
+  async deleteShop(
+    shopId: string,
+    user: { userId: number; role: string },
+  ) {
     const shop = await this.repo.findOne({
-      where: { id: String(shopId) },
+      where: { id: shopId },
       relations: ['user'],
     });
 
     if (!shop) throw new NotFoundException('Shop not found');
 
-    if (shop.user.id !== String(userId)) {
+    if (user.role !== 'admin' && shop.user.id !== String(user.userId)) {
       throw new ForbiddenException('Not shop owner');
     }
 
-    return this.deleteById(shopId);
+    await this.repo.manager.transaction(async (manager) => {
+      await manager.update(
+        Product,
+        { shop_id: shop.id },
+        { status: 'inactive', is_active: false },
+      );
+      await manager.softDelete(Shop, shopId);
+    });
+    return { success: true, id: shopId };
   }
 
   async getShopeeMallActive(limit = 16) {

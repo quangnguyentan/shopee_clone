@@ -15,6 +15,8 @@ import { clearMe } from "@/common/storage/user.slice";
 import { logout } from "@/common/storage/auth.slice";
 import { socket } from "@/common/config/socket";
 import Logo from "./Logo";
+import { setAuthScope } from "@/common/constants";
+import { toast } from "sonner";
 
 const { Header, Sider, Content } = Layout;
 
@@ -29,10 +31,11 @@ const Navbar: React.FC = () => {
     try {
       await logoutApi().unwrap();
     } catch {
-      // ignore – backend có thể đã logout rồi
+      toast.error("Sign-out could not be confirmed. Your server session may remain active.");
     } finally {
       dispatch(clearMe());
       dispatch(logout());
+      setAuthScope("admin");
 
       if (socket.connected) socket.disconnect();
     }
@@ -42,6 +45,25 @@ const Navbar: React.FC = () => {
   } = theme.useToken();
   const location = useLocation();
   const navigate = useAppNavigate();
+  const navItems =
+    me?.role === "seller"
+      ? NAV_ITEMS.filter((item) =>
+          [
+            "/",
+            "/shops",
+            "/products",
+            "/orders",
+            "/vouchers",
+            "/reviews",
+          ].includes(item.url),
+        )
+      : NAV_ITEMS;
+  const selectedKey =
+    navItems.find(
+      (item) =>
+        location.pathname === item.url ||
+        (item.url !== "/" && location.pathname.startsWith(`${item.url}/`)),
+    )?.key ?? "/";
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -67,10 +89,10 @@ const Navbar: React.FC = () => {
           <Logo collapsed={collapsed} />
 
           <Menu
-            selectedKeys={[location.pathname]}
+            selectedKeys={[selectedKey]}
             theme="light"
             mode="inline"
-            items={NAV_ITEMS.map((item) => ({
+            items={navItems.map((item) => ({
               ...item,
               onClick: () => navigate(item.url),
             }))}
@@ -136,7 +158,9 @@ const Navbar: React.FC = () => {
             </div>
             <div className="flex flex-col leading-tight gap-1">
               <span className="text-white font-medium">{me?.name}</span>
-              <span className="text-xs text-white">Quản trị viên</span>
+              <span className="text-xs text-white">
+                {me?.role === "seller" ? "Người bán" : "Quản trị viên"}
+              </span>
             </div>
           </div>
         </Header>

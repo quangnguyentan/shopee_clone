@@ -22,7 +22,8 @@ import { setMe } from "@/common/storage/user.slice";
 import { socket } from "@/common/config/socket";
 import { AUTH_ERROR } from "@/common/constants/errors";
 import { getErrorMessage } from "@/common/helper/handleErrorToast";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { setAuthScope } from "@/common/constants";
 
 const { Title, Text, Link } = Typography;
 
@@ -38,6 +39,8 @@ export default function LoginCard() {
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const scope = location.pathname.startsWith("/seller") ? "seller" : "admin";
   const {
     control,
     handleSubmit,
@@ -56,6 +59,7 @@ export default function LoginCard() {
       {
         loading: "Signing in...",
         success: (res) => {
+          setAuthScope(scope);
           dispatch(loginSuccess());
           dispatch(setMe({ user: res.user, sessionId: res.sessionId }));
 
@@ -68,12 +72,19 @@ export default function LoginCard() {
             res.sessionId && socket.emit("register_session", res.sessionId);
           }
           navigate("/", { replace: true });
-          return "Login successful";
+          return scope === "seller"
+            ? "Seller login successful"
+            : "Admin login successful";
         },
         error: (err) =>
           getErrorMessage(err, {
-            [AUTH_ERROR.USER_NOT_FOUND]: "Admin account not found",
+            [AUTH_ERROR.USER_NOT_FOUND]:
+              scope === "seller"
+                ? "Seller account not found"
+                : "Admin account not found",
             [AUTH_ERROR.INVALID_PASSWORD]: "Invalid password",
+            [AUTH_ERROR.SELLER_NOT_APPROVED]:
+              "Your seller account is not active yet",
           }),
       }
     );
@@ -107,7 +118,9 @@ export default function LoginCard() {
                 {...field}
                 size="large"
                 prefix={<UserOutlined />}
-                placeholder="admin-01@acme.com"
+                placeholder={
+                  scope === "seller" ? "seller@example.com" : "admin@example.com"
+                }
                 status={fieldState.error ? "error" : ""}
                 className="mt-1"
               />

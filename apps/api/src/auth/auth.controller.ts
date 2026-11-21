@@ -164,21 +164,27 @@ export class AuthController {
 
   @Post('logout')
   logout(@Req() req, @Res({ passthrough: true }) res: any) {
-    const refreshToken =
-      req.cookies?.admin_refresh_token ||
-      req.cookies?.buyer_refresh_token ||
-      req.cookies?.seller_refresh_token;
+    const headerScope = req.headers['x-auth-scope'];
+    const scope = this.authService.parseScope(headerScope);
+    const refreshToken = scope
+      ? req.cookies?.[`${scope}_refresh_token`]
+      : req.cookies?.admin_refresh_token ||
+        req.cookies?.buyer_refresh_token ||
+        req.cookies?.seller_refresh_token;
 
-    return this.authService.logoutByRefresh(refreshToken, res);
+    return this.authService.logoutByRefresh(refreshToken, res, scope);
   }
   @Post('logout-all')
   logoutAll(@Req() req, @Res({ passthrough: true }) res: any) {
-    const refreshToken =
-      req.cookies?.admin_refresh_token ||
-      req.cookies?.buyer_refresh_token ||
-      req.cookies?.seller_refresh_token;
+    const headerScope = req.headers['x-auth-scope'];
+    const scope = this.authService.parseScope(headerScope);
+    const refreshToken = scope
+      ? req.cookies?.[`${scope}_refresh_token`]
+      : req.cookies?.admin_refresh_token ||
+        req.cookies?.buyer_refresh_token ||
+        req.cookies?.seller_refresh_token;
 
-    return this.authService.logoutAllByRefresh(refreshToken, res);
+    return this.authService.logoutAllByRefresh(refreshToken, res, scope);
   }
   @Post('2fa/setup')
   setup2FA(@Body() dto: Setup2FADto) {

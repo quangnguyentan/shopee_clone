@@ -4,7 +4,7 @@ import { Category } from './entities/category.entity';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { Auth } from '@/common/decorators/auth.decorator';
+import { AuthRole } from '@/common/decorators/auth-role.decorator';
 import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
 
 import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
@@ -26,14 +26,14 @@ export class CategoryController extends BaseController<Category> {
     return this.service.findChildren(+id);
   }
 
-  @Auth()
+  @AuthRole('admin')
   @Post()
   @ApiAuthenticated()
   create(@Body() dto: CreateCategoryDto) {
     return this.service.createCategory(dto);
   }
 
-  @Auth()
+  @AuthRole('admin')
   @Patch(':id')
   @ApiAuthenticated()
   update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {

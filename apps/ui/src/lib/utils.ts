@@ -12,3 +12,17 @@ export const chunkArray = <T>(arr: T[], size: number): T[][] => {
   }
   return result;
 };
+
+export const createShopeeSlug = (
+  name: string,
+  type: string,
+  id: string
+) => {
+  const slug = name
+    .normalize("NFC")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^\p{L}\p{N}-]/gu, "");
+
+  return `${slug}-${type}.${id}`;
+};

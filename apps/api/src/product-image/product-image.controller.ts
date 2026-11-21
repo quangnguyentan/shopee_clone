@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  UnauthorizedException,
   Body,
   Get,
   Param,
@@ -9,9 +10,10 @@ import {
 } from '@nestjs/common';
 import { ProductImageService } from './product-image.service';
 import { CreateProductImageDto } from './dto/create-product-image.dto';
-import { Auth } from '@/common/decorators/auth.decorator';
 import { BaseController } from '@/base/base.controller';
 import { ProductImage } from './entities/product-image.entity';
+import { AuthRole } from '@/common/decorators/auth-role.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
 import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
 
@@ -23,18 +25,25 @@ export class ProductImageController extends BaseController<ProductImage> {
   }
 
   @Get()
+  @AuthRole('admin')
   findAll() {
     return this.service.findAll();
   }
 
   @Get(':id')
+  @AuthRole('admin')
   findOne(@Param('id') id: string) {
     return this.service.findOneById(+id);
   }
 
   @Post()
-  create(@Body() dto: CreateProductImageDto) {
-    return this.service.createImage(dto);
+  @AuthRole('admin', 'seller')
+  create(
+    @Body() dto: CreateProductImageDto,
+    @CurrentUser() user?: { userId: number; role: 'admin' | 'seller' },
+  ) {
+    if (!user) throw new UnauthorizedException();
+    return this.service.createImage(dto, user);
   }
 
   @Get('product/:id')
@@ -43,7 +52,11 @@ export class ProductImageController extends BaseController<ProductImage> {
   }
 
   @Patch(':id/set-primary')
-  setPrimary(@Param('id') id: number) {
-    return this.service.setPrimary(+id);
+  @AuthRole('admin', 'seller')
+  setPrimary(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: number; role: 'admin' | 'seller' },
+  ) {
+    return this.service.setPrimary(id, user);
   }
 }

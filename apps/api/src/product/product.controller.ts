@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   BadRequestException,
+  UnauthorizedException,
   Param,
   ParseIntPipe,
   Patch,
@@ -14,7 +15,6 @@ import {
 import { BaseController } from '@/base/base.controller';
 import { Product } from './entities/product.entity';
 import { ProductService } from './product.service';
-import { Auth } from '@/common/decorators/auth.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -42,14 +42,14 @@ export class ProductController extends BaseController<Product> {
   findByShop(@Param('shopId') shopId: string) {
     return this.service.findByShop(+shopId);
   }
-  @Auth()
+  @AuthRole('admin', 'seller')
   @Post('seller')
   @ApiAuthenticated()
   createBySeller(@CurrentUser() user, @Body() dto: CreateProductDto) {
-    return this.service.createProduct(user.userId, dto);
+    return this.service.createProduct(user, dto);
   }
 
-  @Auth()
+  @AuthRole('admin', 'seller')
   @Patch('seller/:id')
   @ApiAuthenticated()
   updateBySeller(
@@ -57,14 +57,14 @@ export class ProductController extends BaseController<Product> {
     @CurrentUser() user,
     @Body() dto: UpdateProductDto,
   ) {
-    return this.service.updateProduct(+id, user.userId, dto);
+    return this.service.updateProduct(+id, user, dto);
   }
 
-  @Auth()
+  @AuthRole('admin', 'seller')
   @Delete('seller/:id')
   @ApiAuthenticated()
   deleteBySeller(@Param('id') id: string, @CurrentUser() user) {
-    return this.service.deleteProduct(+id, user.userId);
+    return this.service.deleteProduct(+id, user);
   }
   @Get('buyer')
   findAllView(@Query() query: PaginationDto) {
@@ -95,28 +95,36 @@ export class ProductController extends BaseController<Product> {
     return { ...product, similar_products };
   }
 
-  @AuthRole('admin')
+  @AuthRole('admin', 'seller')
   @Get('')
   @ApiAuthenticated()
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query() query: PaginationDto,
+    @CurrentUser() user?: { userId: number; role: 'admin' | 'seller' },
+  ) {
+    if (!user) throw new UnauthorizedException();
+    return this.service.findManagedProducts(query, user);
   }
 
-  @AuthRole('admin')
+  @AuthRole('admin', 'seller')
   @Get(':id')
   @ApiAuthenticated()
-  findOne(@Param('id') id: string) {
-    return this.service.findOneById(+id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() user?: { userId: number; role: 'admin' | 'seller' },
+  ) {
+    if (!user) throw new UnauthorizedException();
+    return this.service.findOneById(+id, user);
   }
 
-  @Auth()
+  @AuthRole('admin', 'seller')
   @Post('seller/full')
   @ApiAuthenticated()
   createFull(@CurrentUser() user, @Body() dto: CreateProductWithVariantDto) {
-    return this.service.createFullProduct(user.userId, dto);
+    return this.service.createFullProduct(user, dto);
   }
 
-  @Auth()
+  @AuthRole('admin', 'seller')
   @Put('seller/:id/full')
   @ApiAuthenticated()
   updateFull(
@@ -124,7 +132,7 @@ export class ProductController extends BaseController<Product> {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CreateProductWithVariantDto,
   ) {
-    return this.service.updateFullProduct(id, user.userId, dto);
+    return this.service.updateFullProduct(id, user, dto);
   }
   @OptionalAuth()
   @Get('search')

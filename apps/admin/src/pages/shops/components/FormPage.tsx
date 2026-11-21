@@ -26,6 +26,7 @@ import {
 import { uploadImagesInHtml } from "@/common/utils/uploadImagesInHtml";
 import { getAssetUrl } from "@/common/utils/assets";
 import { useGetAllUsersQuery } from "@/common/api/user.api";
+import { useAppSelector } from "@/common/hooks/useAppSelector";
 
 type ShopFormValues = {
   name: string;
@@ -43,22 +44,23 @@ const FormPage = () => {
   const [form] = Form.useForm<ShopFormValues>();
   const editorRef = useRef<QuillEditorRef>(null);
   const navigate = useNavigate();
+  const role = useAppSelector((state) => state.user.me?.role);
+  const isSeller = role === "seller";
 
   const { data: shop, isLoading } = useGetShopByIdQuery(
     { id },
     { skip: !isEdit },
   );
 
-  const { data: users, isLoading: isUsersLoading } = useGetAllUsersQuery();
+  const { data: users, isLoading: isUsersLoading } = useGetAllUsersQuery(
+    { page: 1, limit: 100, role: "seller" },
+    { skip: isSeller },
+  );
   const [createShop, { isLoading: isCreating }] = useCreateShopMutation();
   const [updateShop, { isLoading: isUpdating }] = useUpdateShopMutation();
 
   const [uploadSingleAsset] = useUploadSingleAssetMutation();
   const [uploadDescriptionImages] = useUploadDescriptionImagesMutation();
-
-  // const filterSeller = useMemo(() => {
-  //   return users?.items?.filter((u) => u.role === "seller");
-  // }, [users]);
 
   useEffect(() => {
     if (isEdit && shop) {
@@ -125,10 +127,14 @@ const FormPage = () => {
       const body = {
         name: values.name,
         description: descriptionHtml,
-        is_active: values.is_active,
-        rating: values.rating,
         logo,
-        user_id: Number(values.user_id),
+        ...(isSeller
+          ? {}
+          : {
+              is_active: values.is_active,
+              rating: values.rating,
+              user_id: Number(values.user_id),
+            }),
       };
 
       if (isEdit) {
@@ -167,7 +173,7 @@ const FormPage = () => {
         {isEdit ? "Edit Shop" : "Create Shop"}
       </h2>
 
-      {!isEdit && (
+      {!isEdit && !isSeller && (
         <Form.Item
           label="Shop Owner"
           name="user_id"
@@ -191,13 +197,17 @@ const FormPage = () => {
         <Input size="large" />
       </Form.Item>
 
-      <Form.Item label="Rating" name="rating">
-        <InputNumber min={0} max={5} step={0.1} className="w-full" />
-      </Form.Item>
+      {!isSeller && (
+        <Form.Item label="Rating" name="rating">
+          <InputNumber min={0} max={5} step={0.1} className="w-full" />
+        </Form.Item>
+      )}
 
-      <Form.Item label="Active" name="is_active" valuePropName="checked">
-        <Switch />
-      </Form.Item>
+      {!isSeller && (
+        <Form.Item label="Active" name="is_active" valuePropName="checked">
+          <Switch />
+        </Form.Item>
+      )}
 
       <Form.Item
         label="Description"

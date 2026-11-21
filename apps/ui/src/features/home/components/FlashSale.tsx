@@ -27,7 +27,8 @@ import {
 import { getAssetUrl } from "@/src/lib/assets";
 
 const FlashSale = () => {
-  const { data: flashSale } = useGetActiveFlashSaleQuery();
+  const { data: flashSale, isLoading: isFlashSaleLoading } =
+    useGetActiveFlashSaleQuery();
 
   const flashSaleId = flashSale?.id;
 
@@ -35,28 +36,25 @@ const FlashSale = () => {
     skip: !flashSaleId,
   });
   console.log(items, "items");
-  const [time, setTime] = useState(() => {
-    const END_TIME = flashSale ? Date.now() + flashSale.countdown : null;
-    return END_TIME ? END_TIME - Date.now() : 0;
-  });
+  const [time, setTime] = useState<number | null>(null);
 
   useEffect(() => {
     if (!flashSale) return;
 
-    const END_TIME = Date.now() + flashSale.countdown;
-    const id = setInterval(() => {
-      const diff = END_TIME - Date.now();
-      setTime(diff > 0 ? diff : 0);
-    }, 1000);
+    const endTime = Date.now() + flashSale.countdown;
+    const updateTime = () => setTime(Math.max(endTime - Date.now(), 0));
+    updateTime();
+    const id = setInterval(updateTime, 1000);
 
     return () => clearInterval(id);
   }, [flashSale]);
 
-  const h = Math.floor(time / 3600000);
-  const m = Math.floor((time / 60000) % 60);
-  const s = Math.floor((time / 1000) % 60);
+  const h = Math.floor((time ?? 0) / 3600000);
+  const m = Math.floor(((time ?? 0) / 60000) % 60);
+  const s = Math.floor(((time ?? 0) / 1000) % 60);
 
   const pad = (n: number) => n.toString().padStart(2, "0");
+  const isTimerLoading = isFlashSaleLoading || (!!flashSale && time === null);
 
   return (
     <div className="flex flex-col gap-2">
@@ -74,11 +72,23 @@ const FlashSale = () => {
             />
 
             <div className="flex items-center gap-1">
-              <TimeBox value={pad(h)} />
-              <Colon />
-              <TimeBox value={pad(m)} />
-              <Colon />
-              <TimeBox value={pad(s)} />
+              {isTimerLoading ? (
+                <>
+                  <TimeBox value="00" isLoading />
+                  <Colon />
+                  <TimeBox value="00" isLoading />
+                  <Colon />
+                  <TimeBox value="00" isLoading />
+                </>
+              ) : flashSale && time !== null ? (
+                <>
+                  <TimeBox value={pad(h)} />
+                  <Colon />
+                  <TimeBox value={pad(m)} />
+                  <Colon />
+                  <TimeBox value={pad(s)} />
+                </>
+              ) : null}
             </div>
           </div>
 

@@ -6,6 +6,8 @@ import type {
 import { baseApi, type PaginatedResponse } from "../config/baseApi";
 import type { Product } from "../types/product.type";
 
+type PageQuery = { page?: number; limit?: number };
+
 export const productApi = baseApi
   .enhanceEndpoints({
     addTagTypes: ["Product"],
@@ -13,10 +15,11 @@ export const productApi = baseApi
   .injectEndpoints({
     overrideExisting: true,
     endpoints: (builder) => ({
-      getAllProduct: builder.query<PaginatedResponse<Product>, void>({
-        query: () => ({
+      getAllProduct: builder.query<PaginatedResponse<Product>, PageQuery | void>({
+        query: (params) => ({
           url: `/products/`,
           method: "GET",
+          params: params || undefined,
         }),
         providesTags: ["Product"],
       }),
@@ -62,8 +65,15 @@ export const productApi = baseApi
       >({
         query: ({ id, body }) => ({
           url: `/products/seller/${id}`,
-          method: "PUT",
+          method: "PATCH",
           data: body,
+        }),
+        invalidatesTags: ["Product"],
+      }),
+      deleteProduct: builder.mutation<{ affected?: number }, string | number>({
+        query: (id) => ({
+          url: `/products/seller/${id}`,
+          method: "DELETE",
         }),
         invalidatesTags: ["Product"],
       }),
@@ -77,4 +87,5 @@ export const {
   useCreateFullProductMutation,
   useUpdateProductMutation,
   useUpdateFullProductMutation,
+  useDeleteProductMutation,
 } = productApi;

@@ -283,6 +283,12 @@ export class AuthService {
         return { require2FASetup: true };
       }
     }
+    if (scope === 'seller' && user.status !== 'ACTIVE') {
+      throw new AppException(AUTH_ERROR.SELLER_NOT_APPROVED);
+    }
+    if (scope === 'buyer' && user.status !== 'ACTIVE') {
+      throw new AppException(AUTH_ERROR.UNAUTHORIZED);
+    }
     const ok = await bcrypt.compare(password, user.password_hash ?? '');
     if (!ok) throw new AppException(AUTH_ERROR.INVALID_PASSWORD);
 
@@ -362,6 +368,14 @@ export class AuthService {
       return result;
     });
   }
+
+  parseScope(value: unknown): AuthScope | undefined {
+    if (value === 'admin' || value === 'buyer' || value === 'seller') {
+      return value;
+    }
+    return undefined;
+  }
+
   @Cron('0 3 * * *')
   async cleanupRevokedTokens() {
     await this.refreshRepo.delete({
@@ -391,9 +405,14 @@ export class AuthService {
       this.clearAuthCookies(res, scope),
     );
   }
-  async logoutByRefresh(refreshToken: string, res: Response) {
+  async logoutByRefresh(
+    refreshToken: string,
+    res: Response,
+    scope?: AuthScope,
+  ) {
     if (!refreshToken) {
-      this.clearAllAuthCookies(res);
+      if (scope) this.clearAuthCookies(res, scope);
+      else this.clearAllAuthCookies(res);
       return { success: true };
     }
 
@@ -401,7 +420,8 @@ export class AuthService {
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch {
-      this.clearAllAuthCookies(res);
+      if (scope) this.clearAuthCookies(res, scope);
+      else this.clearAllAuthCookies(res);
       return { success: true };
     }
 
@@ -414,9 +434,14 @@ export class AuthService {
     return { success: true };
   }
 
-  async logoutAllByRefresh(refreshToken: string, res: Response) {
+  async logoutAllByRefresh(
+    refreshToken: string,
+    res: Response,
+    scope?: AuthScope,
+  ) {
     if (!refreshToken) {
-      this.clearAllAuthCookies(res);
+      if (scope) this.clearAuthCookies(res, scope);
+      else this.clearAllAuthCookies(res);
       return { success: true };
     }
 
@@ -424,7 +449,8 @@ export class AuthService {
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch {
-      this.clearAllAuthCookies(res);
+      if (scope) this.clearAuthCookies(res, scope);
+      else this.clearAllAuthCookies(res);
       return { success: true };
     }
 
@@ -453,8 +479,11 @@ export class AuthService {
       sessionId,
       user: {
         id: user.id,
+        email: user.email,
         name: user.name,
         avatar: user.avatar,
+        role: user.role,
+        status: user.status,
       },
     };
   }

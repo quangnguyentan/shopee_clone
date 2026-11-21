@@ -5,6 +5,7 @@ import { lazy, Suspense } from "react";
 
 import { PublicLayout } from "@/components/PublicLayout";
 import { ProtectedLayout } from "@/components/ProtectedLayout";
+import RoleGuard from "@/components/RoleGuard";
 import Navbar from "@/components/Navbar";
 import Loading from "./components/Loading";
 import { ProductFormPage } from "./pages/products/components";
@@ -12,6 +13,9 @@ import { ProductFormPage } from "./pages/products/components";
 const Login = lazy(() => import("@/pages/login"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const User = lazy(() => import("@/pages/users"));
+const Orders = lazy(() => import("@/pages/orders"));
+const Vouchers = lazy(() => import("@/pages/vouchers"));
+const Reviews = lazy(() => import("@/pages/reviews"));
 const Category = lazy(() => import("@/pages/category"));
 const CategoryAttribute = lazy(() => import("@/pages/category-attribute"));
 const CategoryAttributeValue = lazy(
@@ -56,6 +60,10 @@ const S = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<Loading />}>{children}</Suspense>
 );
 
+const AdminOnly = ({ children }: { children: React.ReactNode }) => (
+  <RoleGuard roles={["admin"]}>{children}</RoleGuard>
+);
+
 export const router = createBrowserRouter([
   {
     element: (
@@ -66,6 +74,14 @@ export const router = createBrowserRouter([
     children: [
       {
         path: "admin/login",
+        element: (
+          <S>
+            <Login />
+          </S>
+        ),
+      },
+      {
+        path: "seller/login",
         element: (
           <S>
             <Login />
@@ -97,10 +113,42 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "orders",
+            element: (
+              <S>
+                <RoleGuard roles={["admin", "seller"]}>
+                  <Orders />
+                </RoleGuard>
+              </S>
+            ),
+          },
+          {
+            path: "vouchers",
+            element: (
+              <S>
+                <RoleGuard roles={["admin", "seller"]}>
+                  <Vouchers />
+                </RoleGuard>
+              </S>
+            ),
+          },
+          {
+            path: "reviews",
+            element: (
+              <S>
+                <RoleGuard roles={["admin", "seller"]}>
+                  <Reviews />
+                </RoleGuard>
+              </S>
+            ),
+          },
+          {
             path: "users",
             element: (
               <S>
-                <User />
+                <AdminOnly>
+                  <User />
+                </AdminOnly>
               </S>
             ),
           },
@@ -108,7 +156,9 @@ export const router = createBrowserRouter([
             path: "users/create",
             element: (
               <S>
-                <UserFormPage />
+                <AdminOnly>
+                  <UserFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -116,7 +166,9 @@ export const router = createBrowserRouter([
             path: "users/:id/edit",
             element: (
               <S>
-                <UserFormPage />
+                <AdminOnly>
+                  <UserFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -124,7 +176,9 @@ export const router = createBrowserRouter([
             path: "categories",
             element: (
               <S>
-                <Category />
+                <AdminOnly>
+                  <Category />
+                </AdminOnly>
               </S>
             ),
           },
@@ -132,7 +186,9 @@ export const router = createBrowserRouter([
             path: "categories/create",
             element: (
               <S>
-                <CategoryFormPage />
+                <AdminOnly>
+                  <CategoryFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -140,7 +196,9 @@ export const router = createBrowserRouter([
             path: "categories/:id/edit",
             element: (
               <S>
-                <CategoryFormPage />
+                <AdminOnly>
+                  <CategoryFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -148,7 +206,9 @@ export const router = createBrowserRouter([
             path: "categoryAttributes",
             element: (
               <S>
-                <CategoryAttribute />
+                <AdminOnly>
+                  <CategoryAttribute />
+                </AdminOnly>
               </S>
             ),
           },
@@ -156,7 +216,9 @@ export const router = createBrowserRouter([
             path: "categoryAttributes/create",
             element: (
               <S>
-                <CategoryAttributeFormPage />
+                <AdminOnly>
+                  <CategoryAttributeFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -164,7 +226,9 @@ export const router = createBrowserRouter([
             path: "categoryAttributes/:id/edit",
             element: (
               <S>
-                <CategoryAttributeFormPage />
+                <AdminOnly>
+                  <CategoryAttributeFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -172,7 +236,9 @@ export const router = createBrowserRouter([
             path: "category-attributes/:attributeId/values",
             element: (
               <S>
-                <CategoryAttributeValue />
+                <AdminOnly>
+                  <CategoryAttributeValue />
+                </AdminOnly>
               </S>
             ),
           },
@@ -180,7 +246,9 @@ export const router = createBrowserRouter([
             path: "category-attributes/:attributeId/values/create",
             element: (
               <S>
-                <CategoryAttributeValueFormPage />
+                <AdminOnly>
+                  <CategoryAttributeValueFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -188,7 +256,9 @@ export const router = createBrowserRouter([
             path: "category-attributes/:attributeId/values/:id/edit",
             element: (
               <S>
-                <CategoryAttributeValueFormPage />
+                <AdminOnly>
+                  <CategoryAttributeValueFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -228,7 +298,9 @@ export const router = createBrowserRouter([
             path: "shops/create",
             element: (
               <S>
-                <ShopFormPage />
+                <AdminOnly>
+                  <ShopFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -244,7 +316,9 @@ export const router = createBrowserRouter([
             path: "productVariantAttributes",
             element: (
               <S>
-                <ProductVariantAttribute />
+                <AdminOnly>
+                  <ProductVariantAttribute />
+                </AdminOnly>
               </S>
             ),
           },
@@ -252,7 +326,9 @@ export const router = createBrowserRouter([
             path: "product-variants/:variantId/attributes/create",
             element: (
               <S>
-                <ProductVariantAttributeFormPage />
+                <AdminOnly>
+                  <ProductVariantAttributeFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -260,7 +336,9 @@ export const router = createBrowserRouter([
             path: "product-variants/:variantId/attributes/:id/edit",
             element: (
               <S>
-                <ProductVariantAttributeFormPage />
+                <AdminOnly>
+                  <ProductVariantAttributeFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -268,7 +346,9 @@ export const router = createBrowserRouter([
             path: "product-images",
             element: (
               <S>
-                <ProductImages />
+                <AdminOnly>
+                  <ProductImages />
+                </AdminOnly>
               </S>
             ),
           },
@@ -276,7 +356,9 @@ export const router = createBrowserRouter([
             path: "product-images/create",
             element: (
               <S>
-                <ProductImageFormPage />
+                <AdminOnly>
+                  <ProductImageFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -284,7 +366,9 @@ export const router = createBrowserRouter([
             path: "product-images/:id/edit",
             element: (
               <S>
-                <ProductImageFormPage />
+                <AdminOnly>
+                  <ProductImageFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -292,7 +376,9 @@ export const router = createBrowserRouter([
             path: "product-variants",
             element: (
               <S>
-                <ProductVariants />
+                <AdminOnly>
+                  <ProductVariants />
+                </AdminOnly>
               </S>
             ),
           },
@@ -300,7 +386,9 @@ export const router = createBrowserRouter([
             path: "product-variants/create",
             element: (
               <S>
-                <ProductVariantFormPage />
+                <AdminOnly>
+                  <ProductVariantFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -308,7 +396,9 @@ export const router = createBrowserRouter([
             path: "product-variants/:id/edit",
             element: (
               <S>
-                <ProductVariantFormPage />
+                <AdminOnly>
+                  <ProductVariantFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -316,7 +406,9 @@ export const router = createBrowserRouter([
             path: "flash-sales",
             element: (
               <S>
-                <FlashSales />
+                <AdminOnly>
+                  <FlashSales />
+                </AdminOnly>
               </S>
             ),
           },
@@ -324,7 +416,9 @@ export const router = createBrowserRouter([
             path: "flash-sales/create",
             element: (
               <S>
-                <FlashSaleFormPage />
+                <AdminOnly>
+                  <FlashSaleFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -332,7 +426,9 @@ export const router = createBrowserRouter([
             path: "flash-sales/:id/edit",
             element: (
               <S>
-                <FlashSaleFormPage />
+                <AdminOnly>
+                  <FlashSaleFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -340,7 +436,9 @@ export const router = createBrowserRouter([
             path: "flash-sales/:flashSaleId/items",
             element: (
               <S>
-                <FlashSaleItems />
+                <AdminOnly>
+                  <FlashSaleItems />
+                </AdminOnly>
               </S>
             ),
           },
@@ -348,7 +446,9 @@ export const router = createBrowserRouter([
             path: "flash-sales/:flashSaleId/items/create",
             element: (
               <S>
-                <FlashSaleItemFormPage />
+                <AdminOnly>
+                  <FlashSaleItemFormPage />
+                </AdminOnly>
               </S>
             ),
           },
@@ -356,7 +456,9 @@ export const router = createBrowserRouter([
             path: "flash-sales/:flashSaleId/items/:itemId/edit",
             element: (
               <S>
-                <FlashSaleItemFormPage />
+                <AdminOnly>
+                  <FlashSaleItemFormPage />
+                </AdminOnly>
               </S>
             ),
           },

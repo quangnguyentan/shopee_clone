@@ -5,8 +5,10 @@ import {
   FileImageOutlined,
   InboxOutlined,
   ProductOutlined,
-  ProfileOutlined,
   ShopOutlined,
+  ShoppingCartOutlined,
+  StarOutlined,
+  TagOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -17,6 +19,18 @@ export const NAV_ITEMS = [
     icon: <DashboardOutlined />,
     label: "Dashboard",
     url: "/",
+  },
+  {
+    key: "/orders",
+    icon: <ShoppingCartOutlined />,
+    label: "Orders",
+    url: "/orders",
+  },
+  {
+    key: "/reviews",
+    icon: <StarOutlined />,
+    label: "Reviews",
+    url: "/reviews",
   },
   {
     key: "/users",
@@ -55,6 +69,12 @@ export const NAV_ITEMS = [
     url: "/flash-sales",
   },
   {
+    key: "/vouchers",
+    icon: <TagOutlined />,
+    label: "Vouchers",
+    url: "/vouchers",
+  },
+  {
     key: "/product-images",
     icon: <FileImageOutlined />,
     label: "Product Images",
@@ -65,11 +85,5 @@ export const NAV_ITEMS = [
     icon: <InboxOutlined />,
     label: "Product Variants",
     url: "/product-variants",
-  },
-  {
-    key: "/variant-options",
-    icon: <ProfileOutlined />,
-    label: "Variant Options",
-    url: "/variant-options",
   },
 ];

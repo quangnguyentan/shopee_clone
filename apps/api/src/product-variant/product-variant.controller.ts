@@ -14,7 +14,6 @@ import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { BaseController } from '@/base/base.controller';
 import { ProductVariant } from './entities/product-variant.entity';
-import { Auth } from '@/common/decorators/auth.decorator';
 import { AuthRole } from '@/common/decorators/auth-role.decorator';
 import { PaginationDto } from '@/base/base.dto';
 import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
@@ -43,14 +42,14 @@ export class ProductVariantController extends BaseController<ProductVariant> {
     return this.service.findByProduct(+productId);
   }
 
-  @Auth()
+  @AuthRole('admin')
   @Patch(':id')
   @ApiAuthenticated()
   update(@Param('id') id: string, @Body() dto: UpdateProductVariantDto) {
     return this.service.updateVariant(+id, dto);
   }
 
-  @Auth()
+  @AuthRole('admin')
   @Delete(':id')
   @ApiAuthenticated()
   delete(@Param('id') id: string) {
