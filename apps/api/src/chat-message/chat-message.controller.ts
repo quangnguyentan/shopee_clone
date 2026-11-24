@@ -1,37 +1,36 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ChatMessageService } from './chat-message.service';
 import { CreateChatMessageDto } from './dto/create-chat-message.dto';
-import { UpdateChatMessageDto } from './dto/update-chat-message.dto';
-
-import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
+import { AuthRole } from '@/common/decorators/auth-role.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import {
+  ApiAuthenticated,
+  ApiControllerDocs,
+} from '@/common/decorators/api-controller-docs.decorator';
 
 @ApiControllerDocs('Chat Messages')
 @Controller('chat-message')
 export class ChatMessageController {
   constructor(private readonly chatMessageService: ChatMessageService) {}
 
-  @Post()
-  create(@Body() createChatMessageDto: CreateChatMessageDto) {
-    return this.chatMessageService.create(createChatMessageDto);
+  @AuthRole('buyer')
+  @ApiAuthenticated()
+  @Get('shop/:shopId')
+  findForBuyer(
+    @Param('shopId') shopId: string,
+    @CurrentUser() user: { userId: number },
+  ) {
+    return this.chatMessageService.findForBuyer(shopId, user.userId);
   }
 
-  @Get()
-  findAll() {
-    return this.chatMessageService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.chatMessageService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateChatMessageDto: UpdateChatMessageDto) {
-    return this.chatMessageService.update(+id, updateChatMessageDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.chatMessageService.remove(+id);
+  @AuthRole('buyer')
+  @ApiAuthenticated()
+  @Post('shop/:shopId')
+  sendFromBuyer(
+    @Param('shopId') shopId: string,
+    @CurrentUser() user: { userId: number },
+    @Body() dto: CreateChatMessageDto,
+  ) {
+    return this.chatMessageService.sendFromBuyer(shopId, user.userId, dto);
   }
 }

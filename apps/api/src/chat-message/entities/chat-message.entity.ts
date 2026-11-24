@@ -22,6 +22,9 @@ export class ChatMessage {
   @JoinColumn({ name: 'receiver_shop_id' })
   shop: Shop;
 
+  @Column({ type: 'bigint', nullable: true })
+  buyer_id: number | null;
+
   @Column({ type: 'text' })
   message: string;
 

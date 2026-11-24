@@ -31,6 +31,12 @@ export class ProductReviewController {
     return this.productReviewService.create(dto, user);
   }
 
+  @AuthRole('buyer')
+  @Get('mine/order-items')
+  findMyOrderItemIds(@CurrentUser() user: { userId: number; role: 'buyer' }) {
+    return this.productReviewService.findMyOrderItemIds(user.userId);
+  }
+
   @AuthRole('admin', 'seller')
   @Get('manage')
   findManaged(

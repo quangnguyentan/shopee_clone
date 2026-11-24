@@ -1,26 +1,46 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Shop } from '@/shop/entities/shop.entity';
+import { User } from '@/user/entities/user.entity';
+import { ChatMessage } from './entities/chat-message.entity';
 import { CreateChatMessageDto } from './dto/create-chat-message.dto';
-import { UpdateChatMessageDto } from './dto/update-chat-message.dto';
 
 @Injectable()
 export class ChatMessageService {
-  create(createChatMessageDto: CreateChatMessageDto) {
-    return 'This action adds a new chatMessage';
+  constructor(
+    @InjectRepository(ChatMessage)
+    private readonly messages: Repository<ChatMessage>,
+    @InjectRepository(Shop)
+    private readonly shops: Repository<Shop>,
+  ) {}
+
+  async findForBuyer(shopId: string, buyerId: number) {
+    await this.assertShopExists(shopId);
+    return this.messages.find({
+      where: { shop: { id: shopId }, buyer_id: buyerId },
+      relations: ['sender'],
+      order: { created_at: 'ASC', id: 'ASC' },
+    });
   }
 
-  findAll() {
-    return `This action returns all chatMessage`;
+  async sendFromBuyer(
+    shopId: string,
+    buyerId: number,
+    dto: CreateChatMessageDto,
+  ) {
+    await this.assertShopExists(shopId);
+    const message = this.messages.create({
+      shop: { id: shopId } as Shop,
+      sender: { id: String(buyerId) } as User,
+      buyer_id: buyerId,
+      message: dto.message.trim(),
+    });
+    return this.messages.save(message);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} chatMessage`;
-  }
-
-  update(id: number, updateChatMessageDto: UpdateChatMessageDto) {
-    return `This action updates a #${id} chatMessage`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} chatMessage`;
+  private async assertShopExists(shopId: string) {
+    const shop = await this.shops.findOne({ where: { id: shopId } });
+    if (!shop) throw new NotFoundException('Shop not found');
   }
 }

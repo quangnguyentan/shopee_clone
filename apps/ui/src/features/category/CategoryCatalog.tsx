@@ -12,6 +12,7 @@ export interface CategoryFilters {
   mallOnly: boolean;
   discountedOnly: boolean;
   inStock: boolean;
+  provinceCodes: number[];
   attributeFilters: Record<string, string[]>;
 }
 
@@ -19,6 +20,7 @@ const EMPTY_FILTERS: CategoryFilters = {
   mallOnly: false,
   discountedOnly: false,
   inStock: false,
+  provinceCodes: [],
   attributeFilters: {},
 };
 

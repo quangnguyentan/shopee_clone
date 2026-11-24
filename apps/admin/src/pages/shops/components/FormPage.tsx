@@ -26,6 +26,7 @@ import {
 import { uploadImagesInHtml } from "@/common/utils/uploadImagesInHtml";
 import { getAssetUrl } from "@/common/utils/assets";
 import { useGetAllUsersQuery } from "@/common/api/user.api";
+import { useGetVietnamProvincesQuery } from "@/common/api/address.api";
 import { useAppSelector } from "@/common/hooks/useAppSelector";
 
 type ShopFormValues = {
@@ -34,6 +35,7 @@ type ShopFormValues = {
   is_active: boolean;
   rating?: number;
   user_id?: number;
+  province_code?: number;
   logo?: UploadFileWithExtra[];
 };
 
@@ -48,9 +50,11 @@ const FormPage = () => {
   const isSeller = role === "seller";
 
   const { data: shop, isLoading } = useGetShopByIdQuery(
-    { id },
+    { id: id ?? "" },
     { skip: !isEdit },
   );
+  const { data: provinces = [], isLoading: isProvincesLoading } =
+    useGetVietnamProvincesQuery();
 
   const { data: users, isLoading: isUsersLoading } = useGetAllUsersQuery(
     { page: 1, limit: 100, role: "seller" },
@@ -68,6 +72,7 @@ const FormPage = () => {
         name: shop.name,
         is_active: shop.is_active,
         rating: shop.rating,
+        province_code: shop.province_code ?? undefined,
         description: shop.description,
         user_id: shop.user?.id,
         logo: shop.logo
@@ -128,22 +133,32 @@ const FormPage = () => {
         name: values.name,
         description: descriptionHtml,
         logo,
+        province_code: values.province_code ?? null,
+        province_name:
+          provinces.find((province) => province.code === values.province_code)
+            ?.name ?? null,
         ...(isSeller
           ? {}
           : {
               is_active: values.is_active,
               rating: values.rating,
-              user_id: Number(values.user_id),
             }),
       };
 
       if (isEdit) {
         await updateShop({
-          id,
+          id: id ?? "",
           body,
         }).unwrap();
       } else {
-        await createShop(body).unwrap();
+        if (!isSeller && values.user_id === undefined) {
+          message.error("Please select shop owner");
+          return;
+        }
+        await createShop({
+          ...body,
+          ...(!isSeller ? { user_id: Number(values.user_id) } : {}),
+        }).unwrap();
       }
 
       message.success(
@@ -156,7 +171,7 @@ const FormPage = () => {
     }
   };
 
-  if (isLoading || isUsersLoading) return <Loading />;
+  if (isLoading || isUsersLoading || isProvincesLoading) return <Loading />;
 
   return (
     <Form
@@ -195,6 +210,23 @@ const FormPage = () => {
         rules={[{ required: true, message: "Please input shop name" }]}
       >
         <Input size="large" />
+      </Form.Item>
+
+      <Form.Item
+        label="Province / City"
+        name="province_code"
+        rules={[{ required: true, message: "Please select shop location" }]}
+      >
+        <Select
+          allowClear
+          showSearch
+          optionFilterProp="label"
+          placeholder="Select shop location"
+          options={provinces.map((province) => ({
+            label: province.name,
+            value: province.code,
+          }))}
+        />
       </Form.Item>
 
       {!isSeller && (

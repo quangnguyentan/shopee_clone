@@ -1,14 +1,16 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { OrderItem } from '@/order-item/entities/order-item.entity';
 import { ShopOrder } from '@/shop-order/entities/shop-order.entity';
 import { Shop } from '@/shop/entities/shop.entity';
+import { Shipping } from '@/shipping/entities/shipping.entity';
 import { PaymentService } from '@/payment/payment.service';
 import { ConfigService } from '@nestjs/config';
 import { OrderService } from './order.service';
 import {
   OrderStatus,
+  ShopOrderShippingStatus,
   ShopOrderStatus,
 } from '@/common/enums/marketplace.enums';
 
@@ -206,10 +208,150 @@ describe('OrderService', () => {
     await expect(
       service.updateSellerOrderStatus(
         'shop-order-1',
-        { status: ShopOrderStatus.SHIPPED },
+        {
+          status: ShopOrderStatus.SHIPPED,
+          carrier: 'GHN',
+          tracking_number: 'GHN-123',
+        },
         { userId: 7, role: 'seller' },
       ),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(manager.save).not.toHaveBeenCalled();
+  });
+
+  it('does not let sellers mark an order completed before buyer receipt confirmation', async () => {
+    shopRepo.findOne.mockResolvedValue({ id: 'shop-a' });
+    const manager = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'shop-order-1',
+        order_id: 'order-1',
+        shop_id: 'shop-a',
+        status: ShopOrderStatus.SHIPPED,
+      }),
+      save: jest.fn(),
+      create: jest.fn(),
+    };
+    dataSource.transaction.mockImplementation((work) => work(manager));
+
+    await expect(
+      service.updateSellerOrderStatus(
+        'shop-order-1',
+        { status: ShopOrderStatus.COMPLETED },
+        { userId: 7, role: 'seller' },
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(manager.save).not.toHaveBeenCalled();
+  });
+
+  it('lets a seller hand a processing order to the carrier', async () => {
+    shopRepo.findOne.mockResolvedValue({ id: 'shop-a' });
+    const shopOrder = {
+      id: 'shop-order-1',
+      order_id: 'order-1',
+      shop_id: 'shop-a',
+      shop_order_no: 'SO-1',
+      status: ShopOrderStatus.PROCESSING,
+      shipping_status: ShopOrderShippingStatus.PREPARING,
+      items: [],
+      order: { order_no: 'ORDER-1', buyer: null },
+      status_history: [],
+    };
+    const parentOrder = { id: 'order-1', status: OrderStatus.PROCESSING };
+    const manager = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce(shopOrder)
+        .mockResolvedValueOnce(parentOrder),
+      find: jest
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ status: ShopOrderStatus.SHIPPED }]),
+      save: jest.fn(async (entity) => entity),
+      create: jest.fn((_entity, value) => value),
+    };
+    dataSource.transaction.mockImplementation((work) => work(manager));
+
+    await expect(
+      service.updateSellerOrderStatus(
+        'shop-order-1',
+        {
+          status: ShopOrderStatus.SHIPPED,
+          carrier: 'GHN',
+          tracking_number: 'GHN-123',
+        },
+        { userId: 7, role: 'seller' },
+      ),
+    ).resolves.toMatchObject({
+      id: 'shop-order-1',
+      status: ShopOrderStatus.SHIPPED,
+      shipping_status: ShopOrderShippingStatus.SHIPPED,
+    });
+    expect(parentOrder.status).toBe(OrderStatus.SHIPPED);
+    expect(manager.create).toHaveBeenCalledWith(
+      Shipping,
+      expect.objectContaining({
+        shop_order_id: 'shop-order-1',
+        carrier: 'GHN',
+        tracking_number: 'GHN-123',
+      }),
+    );
+  });
+
+  it('lets only the buyer confirm a shipped shop order as received', async () => {
+    const shopOrder = {
+      id: 'shop-order-1',
+      order_id: 'order-1',
+      status: ShopOrderStatus.SHIPPED,
+      shipping_status: ShopOrderShippingStatus.SHIPPED,
+      order: { buyer_id: '9' },
+    };
+    const parentOrder = {
+      id: 'order-1',
+      status: OrderStatus.SHIPPED,
+      payment_status: 'pending',
+    };
+    const codPayment = { status: 'pending', paid_at: null };
+    const manager = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce(shopOrder)
+        .mockResolvedValueOnce(parentOrder)
+        .mockResolvedValueOnce(codPayment),
+      find: jest
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ status: ShopOrderStatus.COMPLETED }]),
+      save: jest.fn(async (entity) => entity),
+      create: jest.fn((_entity, value) => value),
+    };
+    dataSource.transaction.mockImplementation((work) => work(manager));
+
+    await expect(
+      service.completeMyShopOrder('shop-order-1', 9),
+    ).resolves.toEqual({
+      id: 'shop-order-1',
+      status: ShopOrderStatus.COMPLETED,
+      shipping_status: ShopOrderShippingStatus.DELIVERED,
+    });
+    expect(parentOrder.status).toBe(OrderStatus.COMPLETED);
+    expect(parentOrder.payment_status).toBe('paid');
+    expect(codPayment.status).toBe('succeeded');
+    expect(codPayment.paid_at).toBeInstanceOf(Date);
+  });
+
+  it('does not reveal another buyer shop order', async () => {
+    const manager = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'shop-order-1',
+        order_id: 'order-1',
+        status: ShopOrderStatus.SHIPPED,
+        order: { buyer_id: 'other-buyer' },
+      }),
+    };
+    dataSource.transaction.mockImplementation((work) => work(manager));
+
+    await expect(
+      service.completeMyShopOrder('shop-order-1', 9),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -13,6 +14,9 @@ import { PaginationDto } from '@/base/base.dto';
 import { mapProductImageVariants } from '@/common/utils/product-image.mapper';
 import { ProductVariant } from '@/product-variant/entities/product-variant.entity';
 import { ProductVariantAttribute } from '@/product-variant-attributes/entities/product-variant-attribute.entity';
+import { FlashSaleItem } from '@/flash-sale-item/entities/flash-sale-item.entity';
+import { InventoryReservation } from '@/inventory-reservation/entities/inventory-reservation.entity';
+import { OrderItem } from '@/order-item/entities/order-item.entity';
 import { CreateProductWithVariantDto } from './dto/create-product-full.dto';
 import { generateSKU } from '@/common/utils/generateSKU';
 import { CategoryAttribute } from '@/category-attributes/entities/category-attribute.entity';
@@ -31,6 +35,7 @@ interface BuyerProductFilters {
   mallOnly?: boolean;
   discountedOnly?: boolean;
   inStock?: boolean;
+  provinceCodes?: number[];
   attributeFilters?: { attributeId: string; valueIds: string[] }[];
   sort?: BuyerProductSort;
 }
@@ -148,8 +153,8 @@ export class ProductService extends BaseService<Product> {
 
   findByShop(shopId: number) {
     return this.repo.find({
-      where: { shop: { id: String(shopId) } },
-      relations: ['images'],
+      where: { shop: { id: String(shopId) }, status: 'active' },
+      relations: ['images', 'shop'],
       order: { id: 'DESC' },
     });
   }
@@ -262,7 +267,7 @@ export class ProductService extends BaseService<Product> {
     const queryBuilder = this.repo
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.images', 'img')
-      .leftJoin('p.shop', 'shop')
+      .leftJoinAndSelect('p.shop', 'shop')
       .leftJoin('p.variants', 'v')
       .leftJoin(
         'flash_sale_items',
@@ -292,6 +297,9 @@ export class ProductService extends BaseService<Product> {
         'p.price_max',
         'p.view_count',
         'p.sold_count',
+        'shop.id',
+        'shop.name',
+        'shop.province_name',
         'img.id',
         'img.url',
         'img.is_primary',
@@ -329,6 +337,11 @@ export class ProductService extends BaseService<Product> {
     }
     if (filters.mallOnly) {
       queryBuilder.andWhere('shop.is_mall = true');
+    }
+    if (filters.provinceCodes?.length) {
+      queryBuilder.andWhere('shop.province_code IN (:...provinceCodes)', {
+        provinceCodes: filters.provinceCodes,
+      });
     }
     if (filters.discountedOnly) {
       queryBuilder.andWhere('fsi.discount_percent > 0');
@@ -597,8 +610,10 @@ export class ProductService extends BaseService<Product> {
       const prices = dto.variants.map((v) => v.price);
       const stocks = dto.variants.map((v) => v.stock);
 
-      await manager.save(
-        manager.merge(Product, product, {
+      await manager.update(
+        Product,
+        { id: product.id },
+        {
           name: dto.name,
           is_active: dto.status === 'active',
           description: dto.description,
@@ -607,18 +622,8 @@ export class ProductService extends BaseService<Product> {
           price_max: Math.max(...prices),
           stock: stocks.reduce((a, b) => a + b, 0),
           category_id: String(dto.category_id),
-        }),
+        },
       );
-
-      if (product.variants?.length) {
-        await manager.delete(ProductVariantAttribute, {
-          variant_id: In(product.variants.map((v) => v.id)),
-        });
-
-        await manager.delete(ProductVariant, {
-          product: { id: product.id },
-        });
-      }
 
       const categoryAttributes = await manager.find(CategoryAttribute, {
         where: { category_id: String(dto.category_id) },
@@ -626,6 +631,18 @@ export class ProductService extends BaseService<Product> {
       });
 
       const attrMap = new Map(categoryAttributes.map((a) => [a.name, a]));
+      const existingVariants = new Map(
+        (product.variants ?? []).map((variant) => [
+          variant.attribute_signature,
+          variant,
+        ]),
+      );
+
+      if (existingVariants.size > 0) {
+        await manager.delete(ProductVariantAttribute, {
+          variant_id: In(product.variants.map((variant) => variant.id)),
+        });
+      }
 
       for (let i = 0; i < combinations.length; i++) {
         const combo = combinations[i];
@@ -663,15 +680,33 @@ export class ProductService extends BaseService<Product> {
           }
         }
 
-        const variant = await manager.save(
-          manager.create(ProductVariant, {
-            product,
-            sku,
-            price: variantInput.price,
-            stock: variantInput.stock,
-            attribute_signature: createProductVariantSignature(signatureParts),
-          }),
-        );
+        const attributeSignature =
+          createProductVariantSignature(signatureParts);
+        const existingVariant = existingVariants.get(attributeSignature);
+        const variant = existingVariant
+          ? existingVariant
+          : await manager.save(
+              manager.create(ProductVariant, {
+                product_id: product.id,
+                sku,
+                price: variantInput.price,
+                stock: variantInput.stock,
+                attribute_signature: attributeSignature,
+              }),
+            );
+        if (existingVariant) {
+          await manager.update(
+            ProductVariant,
+            { id: existingVariant.id },
+            {
+              sku,
+              price: variantInput.price,
+              stock: variantInput.stock,
+              attribute_signature: attributeSignature,
+            },
+          );
+        }
+        existingVariants.delete(attributeSignature);
 
         const attrs: ProductVariantAttribute[] = [];
 
@@ -705,6 +740,34 @@ export class ProductService extends BaseService<Product> {
         }
 
         await manager.save(attrs);
+      }
+
+      const removedVariantIds = [...existingVariants.values()].map(
+        (variant) => variant.id,
+      );
+      if (removedVariantIds.length > 0) {
+        const flashSaleReference = await manager.findOne(FlashSaleItem, {
+          where: { product_variant_id: In(removedVariantIds) },
+          select: ['id'],
+        });
+        const orderReference = await manager.findOne(OrderItem, {
+          where: { product_variant: { id: In(removedVariantIds) } },
+          select: ['id'],
+        });
+        const reservationReference = await manager.findOne(
+          InventoryReservation,
+          {
+            where: { product_variant_id: In(removedVariantIds) },
+            select: ['id'],
+          },
+        );
+        if (flashSaleReference || orderReference || reservationReference) {
+          throw new ConflictException(
+            'Cannot remove variants referenced by flash sales or order history',
+          );
+        }
+
+        await manager.delete(ProductVariant, { id: In(removedVariantIds) });
       }
 
       return manager.findOne(Product, {

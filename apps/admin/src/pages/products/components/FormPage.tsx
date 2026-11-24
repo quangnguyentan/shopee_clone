@@ -49,6 +49,7 @@ const FormPage = () => {
   const navigate = useNavigate();
   const isSeller = useAppSelector((state) => state.user.me?.role === "seller");
   const hasVariants = Form.useWatch("has_variants", form);
+  const selectedShopId = Form.useWatch("shop_id", form);
 
   const { data: product, isLoading } = useGetProductByIdQuery(
     { id },
@@ -71,6 +72,10 @@ const FormPage = () => {
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
   const [updateFullProduct, { isLoading: isUpdatingFull }] =
     useUpdateFullProductMutation();
+  const selectedShop =
+    shops?.items?.find(
+      (shop) => String(shop.id) === String(selectedShopId),
+    ) ?? product?.shop;
   const isLoadingButton =
     isCreateProduct ||
     isUploadingImages ||
@@ -90,7 +95,7 @@ const FormPage = () => {
       const hasVariants = !!product.variants?.length;
       form.setFieldsValue({
         ...product,
-        shop_id: product.shop.id,
+        shop_id: Number(product.shop.id),
         category_id: product.category?.id,
         has_variants: hasVariants,
         images: mapImagesToUpload(product.images),
@@ -318,6 +323,24 @@ const FormPage = () => {
           />
         </Form.Item>
       )}
+
+      <Alert
+        className="mb-4"
+        type={selectedShop?.province_name ? "info" : "warning"}
+        showIcon
+        message={`Product location: ${selectedShop?.province_name ?? "not set"}`}
+        description="Product location is inherited from its shop. Update the shop location to change what buyers see."
+        action={
+          selectedShop?.id ? (
+            <Button
+              size="small"
+              onClick={() => navigate(`/shops/${selectedShop.id}/edit`)}
+            >
+              Update shop location
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Form.Item
         label="Has variants"

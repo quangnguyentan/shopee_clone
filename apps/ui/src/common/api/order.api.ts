@@ -29,6 +29,15 @@ export interface BuyerOrderItem {
   quantity: number;
 }
 
+export interface BuyerShipment {
+  id: string;
+  carrier: string | null;
+  tracking_number: string | null;
+  status: string;
+  shipped_at: string | null;
+  delivered_at: string | null;
+}
+
 export interface BuyerOrder {
   id: string;
   order_no: string;
@@ -44,6 +53,8 @@ export interface BuyerOrder {
     shop_name: string;
     total_amount: string;
     status: OrderStatus;
+    shipping_status: string;
+    shippings: BuyerShipment[];
     items: BuyerOrderItem[];
   }>;
 }
@@ -71,10 +82,21 @@ export const orderApi = baseApi
         }),
         invalidatesTags: ["Order"],
       }),
+      completeMyShopOrder: builder.mutation<
+        { id: string; status: OrderStatus; shipping_status: string },
+        string
+      >({
+        query: (shopOrderId) => ({
+          url: `/order/mine/shop-orders/${shopOrderId}/complete`,
+          method: "POST",
+        }),
+        invalidatesTags: ["Order"],
+      }),
     }),
   });
 
 export const {
   useGetMyOrdersQuery,
   useRetryOrderPaymentMutation,
+  useCompleteMyShopOrderMutation,
 } = orderApi;

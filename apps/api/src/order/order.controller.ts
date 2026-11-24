@@ -55,6 +55,16 @@ export class OrderController {
     return this.orderService.findMine(user.userId, query);
   }
 
+  @AuthRole('buyer')
+  @Post('mine/shop-orders/:id/complete')
+  @ApiAuthenticated()
+  completeMyShopOrder(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: number },
+  ) {
+    return this.orderService.completeMyShopOrder(id, user.userId);
+  }
+
   @AuthRole('admin', 'seller')
   @Get()
   @ApiAuthenticated()

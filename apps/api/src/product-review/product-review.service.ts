@@ -62,6 +62,7 @@ export class ProductReviewService {
         user_id: String(actor.userId),
         rating: dto.rating,
         comment: dto.comment?.trim() || null,
+        media_urls: dto.media_urls ?? [],
       });
       const saved = await manager.getRepository(ProductReview).save(review);
       await this.refreshProductRating(manager, review.product_id);
@@ -134,6 +135,16 @@ export class ProductReviewService {
       page,
       limit,
     };
+  }
+
+  async findMyOrderItemIds(userId: number) {
+    const reviews = await this.reviewRepo.find({
+      where: { user_id: String(userId) },
+      select: ['order_item_id'],
+    });
+    return reviews
+      .map((review) => review.order_item_id)
+      .filter((id): id is string => id !== null);
   }
 
   async findOne(id: string) {
@@ -210,6 +221,7 @@ export class ProductReviewService {
       product_id: review.product_id,
       rating: review.rating,
       comment: review.comment,
+      media_urls: review.media_urls ?? [],
       shop_reply: review.shop_reply,
       shop_replied_at: review.shop_replied_at,
       created_at: review.created_at,

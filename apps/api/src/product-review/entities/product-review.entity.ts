@@ -56,6 +56,9 @@ export class ProductReview {
   @Column({ type: 'text', nullable: true })
   comment: string | null;
 
+  @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
+  media_urls: string[];
+
   @Column({ type: 'text', nullable: true })
   shop_reply: string | null;
 

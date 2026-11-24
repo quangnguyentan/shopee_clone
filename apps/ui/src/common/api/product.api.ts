@@ -43,6 +43,7 @@ export const productApi = baseApi
           mallOnly?: boolean;
           discountedOnly?: boolean;
           inStock?: boolean;
+          provinceCodes?: number[];
           sort?: "popular" | "latest" | "sales" | "price-asc" | "price-desc";
           attributeFilters?: Record<string, string[]>;
         } | void
@@ -61,6 +62,7 @@ export const productApi = baseApi
                 mall_only: params.mallOnly,
                 discounted_only: params.discountedOnly,
                 in_stock: params.inStock,
+                province_codes: params.provinceCodes?.join(","),
                 sort: params.sort,
                 attribute_filters: params.attributeFilters
                   ? JSON.stringify(params.attributeFilters)
