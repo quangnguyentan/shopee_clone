@@ -15,6 +15,7 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { CreateProductReviewDto } from './dto/create-product-review.dto';
 import { UpdateProductReviewReplyDto } from './dto/update-product-review-reply.dto';
 import { ProductReviewService } from './product-review.service';
+import { PublicProductReviewsQueryDto } from './dto/public-product-reviews-query.dto';
 
 @ApiControllerDocs('Product Reviews')
 @Controller('product-review')
@@ -40,11 +41,12 @@ export class ProductReviewController {
   }
 
   @Get()
-  findAll(
-    @Query() query: PaginationDto,
-    @Query('product_id') productId?: string,
-  ) {
-    return this.productReviewService.findAllPublic(query, productId);
+  findAll(@Query() query: PublicProductReviewsQueryDto) {
+    return this.productReviewService.findAllPublic(
+      query,
+      query.product_id,
+      query.rating,
+    );
   }
 
   @Get(':id')

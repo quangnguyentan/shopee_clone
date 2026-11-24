@@ -33,12 +33,40 @@ export const productApi = baseApi
     endpoints: (builder) => ({
       getBuyerProducts: builder.query<
         PaginatedResponse<ProductBuyerListItem>,
-        { page?: number; limit?: number } | void
+        {
+          page?: number;
+          limit?: number;
+          categoryId?: number;
+          minPrice?: number;
+          maxPrice?: number;
+          minRating?: number;
+          mallOnly?: boolean;
+          discountedOnly?: boolean;
+          inStock?: boolean;
+          sort?: "popular" | "latest" | "sales" | "price-asc" | "price-desc";
+          attributeFilters?: Record<string, string[]>;
+        } | void
       >({
         query: (params) => ({
           url: "/products/buyer",
           method: "GET",
-          params: params ?? undefined,
+          params: params
+            ? {
+                page: params.page,
+                limit: params.limit,
+                category_id: params.categoryId,
+                min_price: params.minPrice,
+                max_price: params.maxPrice,
+                min_rating: params.minRating,
+                mall_only: params.mallOnly,
+                discounted_only: params.discountedOnly,
+                in_stock: params.inStock,
+                sort: params.sort,
+                attribute_filters: params.attributeFilters
+                  ? JSON.stringify(params.attributeFilters)
+                  : undefined,
+              }
+            : undefined,
         }),
         providesTags: (result) => productTags(result),
       }),

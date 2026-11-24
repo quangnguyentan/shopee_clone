@@ -36,7 +36,7 @@ export const categoryApi = baseApi
       >({
         query: ({ id, body }) => ({
           url: `/categories/${id}`,
-          method: "PUT",
+          method: "PATCH",
           data: body,
         }),
         invalidatesTags: ["Category"],

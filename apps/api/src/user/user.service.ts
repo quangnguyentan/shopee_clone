@@ -13,6 +13,7 @@ import { PaginationDto } from '@/base/base.dto';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { SessionsService } from '@/session/session.service';
 
 const managedUserFields = [
@@ -41,11 +42,50 @@ export class UserService extends BaseService<User> {
   async getMe(userId: number) {
     const user = await this.userRepo.findOne({
       where: { id: String(userId) },
-      select: ['id', 'email', 'name', 'role', 'avatar', 'status'],
+      select: [
+        'id',
+        'email',
+        'name',
+        'phone',
+        'gender',
+        'date_of_birth',
+        'role',
+        'avatar',
+        'status',
+        'created_at',
+      ],
     });
 
     if (!user) throw new NotFoundException('User not found');
     return user;
+  }
+
+  async updateMyProfile(
+    userId: number,
+    dto: UpdateMyProfileDto,
+  ) {
+    const user = await this.userRepo.findOneBy({ id: String(userId) });
+    if (!user) throw new NotFoundException('User not found');
+
+    if (dto.phone?.trim()) {
+      const existingPhone = await this.userRepo.findOne({
+        where: { phone: dto.phone.trim() },
+        select: ['id'],
+      });
+      if (existingPhone && existingPhone.id !== user.id) {
+        throw new ConflictException('Phone number is already in use');
+      }
+    }
+
+    if (dto.name !== undefined) user.name = dto.name.trim();
+    if (dto.phone !== undefined) user.phone = dto.phone.trim();
+    if (dto.avatar !== undefined) user.avatar = dto.avatar.trim();
+    if ('gender' in dto) user.gender = dto.gender ?? null;
+    if ('date_of_birth' in dto) {
+      user.date_of_birth = dto.date_of_birth ?? null;
+    }
+    await this.userRepo.save(user);
+    return this.getMe(userId);
   }
 
   async createManagedUser(dto: CreateUserDto) {

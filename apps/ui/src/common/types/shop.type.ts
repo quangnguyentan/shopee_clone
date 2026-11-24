@@ -14,6 +14,12 @@ export interface Shop {
 
   rating: number;
 
+  follower_count?: number;
+
+  rating_count?: number;
+
+  is_mall?: boolean;
+
   is_active: boolean;
 
   products?: Product[];
