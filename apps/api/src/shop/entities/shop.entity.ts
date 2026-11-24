@@ -41,6 +41,12 @@ export class Shop extends BaseEntity {
   @Column({ type: 'int', default: 0 })
   rating_count: number;
 
+  @Column({ type: 'int', nullable: true })
+  province_code: number | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  province_name: string | null;
+
   @Column({
     type: 'enum',
     enum: ShopStatus,

@@ -118,6 +118,8 @@ export class ShopService extends BaseService<Shop> {
       logo: dto.logo,
       rating: dto.rating ?? 0,
       is_active: dto.is_active ?? true,
+      province_code: dto.province_code ?? null,
+      province_name: dto.province_name ?? null,
       user: { id: String(dto.user_id) } as any,
     });
   }
@@ -161,6 +163,8 @@ export class ShopService extends BaseService<Shop> {
         name: dto.name,
         description: dto.description,
         logo: dto.logo,
+        province_code: dto.province_code,
+        province_name: dto.province_name,
       });
     }
     return this.repo.save(shop);

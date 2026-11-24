@@ -1,26 +1,56 @@
-import { Injectable } from '@nestjs/common';
-import { CreateShopFollowDto } from './dto/create-shop-follow.dto';
-import { UpdateShopFollowDto } from './dto/update-shop-follow.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Shop } from '@/shop/entities/shop.entity';
+import { ShopFollow } from './entities/shop-follow.entity';
 
 @Injectable()
 export class ShopFollowService {
-  create(createShopFollowDto: CreateShopFollowDto) {
-    return 'This action adds a new shopFollow';
+  constructor(
+    @InjectRepository(ShopFollow)
+    private readonly follows: Repository<ShopFollow>,
+    @InjectRepository(Shop)
+    private readonly shops: Repository<Shop>,
+  ) {}
+
+  async getFollowerCount(shopId: string) {
+    await this.assertShopExists(shopId);
+    return { follower_count: await this.follows.countBy({ shop_id: Number(shopId) }) };
   }
 
-  findAll() {
-    return `This action returns all shopFollow`;
+  async getStatus(shopId: string, userId: number) {
+    await this.assertShopExists(shopId);
+    const [isFollowing, followerCount] = await Promise.all([
+      this.follows.exist({
+        where: { shop_id: Number(shopId), user_id: userId },
+      }),
+      this.follows.countBy({ shop_id: Number(shopId) }),
+    ]);
+    return { is_following: isFollowing, follower_count: followerCount };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} shopFollow`;
+  async follow(shopId: string, userId: number) {
+    await this.assertShopExists(shopId);
+    await this.follows
+      .createQueryBuilder()
+      .insert()
+      .values({ shop_id: Number(shopId), user_id: userId })
+      .orIgnore()
+      .execute();
+    return this.getStatus(shopId, userId);
   }
 
-  update(id: number, updateShopFollowDto: UpdateShopFollowDto) {
-    return `This action updates a #${id} shopFollow`;
+  async unfollow(shopId: string, userId: number) {
+    await this.assertShopExists(shopId);
+    await this.follows.delete({
+      shop_id: Number(shopId),
+      user_id: userId,
+    });
+    return this.getStatus(shopId, userId);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} shopFollow`;
+  private async assertShopExists(shopId: string) {
+    const shop = await this.shops.findOne({ where: { id: shopId } });
+    if (!shop) throw new NotFoundException('Shop not found');
   }
 }

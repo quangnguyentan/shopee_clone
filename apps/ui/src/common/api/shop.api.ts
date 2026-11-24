@@ -15,8 +15,8 @@ export const shopApi = baseApi
         }),
         providesTags: ["Shop"],
       }),
-      getShopById: builder.query<Shop, { id: A }>({
-        query: ({ id }) => ({
+      getShopById: builder.query<Shop, string>({
+        query: (id) => ({
           url: `/shops/${id}`,
           method: "GET",
         }),
@@ -30,7 +30,7 @@ export const shopApi = baseApi
         }),
         invalidatesTags: ["Shop"],
       }),
-      updateShop: builder.mutation<Shop, { id: A; body: Partial<Shop> }>({
+      updateShop: builder.mutation<Shop, { id: string; body: Partial<Shop> }>({
         query: ({ id, body }) => ({
           url: `/shops/${id}`,
           method: "PATCH",

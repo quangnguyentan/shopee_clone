@@ -38,4 +38,14 @@ export class CreateShopDto {
   @IsBoolean()
   @IsOptional()
   is_active?: boolean;
+
+  @ApiPropertyOptional({ description: 'Vietnam province/city code.', example: 1 })
+  @IsInt()
+  @IsOptional()
+  province_code?: number | null;
+
+  @ApiPropertyOptional({ description: 'Vietnam province/city name.', example: 'Thành phố Hà Nội' })
+  @IsString()
+  @IsOptional()
+  province_name?: string | null;
 }
