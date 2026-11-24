@@ -128,7 +128,7 @@ export class AssetService {
             overwrite: true,
             resource_type: 'image',
           },
-          (error: UploadApiErrorResponse, result?: UploadApiResponse) => {
+          (error?: UploadApiErrorResponse, result?: UploadApiResponse) => {
             if (error) {
               this.logger.error(`Cloudinary upload failed: ${error.message}`);
               reject(

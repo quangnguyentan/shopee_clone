@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useLanguage } from "@/src/lib/locale";
 import {
   FaFacebook,
@@ -11,7 +12,6 @@ import {
 import icon_notification from "@/src/assest/notifications.png";
 import CustomHoverCard from "./CustomHoverCard";
 import Image from "next/image";
-import { Button } from "../ui/button";
 import {
   LANGUAGE_KEYS,
   LanguageKeys,
@@ -21,6 +21,7 @@ import { useNavigate } from "@/src/common/constants/navigate.constant";
 import { useLogoutMutation } from "@/src/common/api/auth.api";
 import { useAppSelector } from "@/src/common/hooks/useAppSelector";
 import { getAssetUrl } from "@/src/lib/assets";
+import NotificationList from "./NotificationList";
 
 const TopBar = () => {
   const { language, setLanguage, t } = useLanguage();
@@ -57,7 +58,7 @@ const TopBar = () => {
             <div className="flex items-center justify-center gap-2 cursor-pointer">
               <Image
                 src={getAssetUrl(me?.avatar) || ""}
-                alt="avatar"
+                alt={t("pages.home.topbar.profile.avatar-alt")}
                 className="rounded-full object-cover"
                 width={20}
                 height={20}
@@ -120,34 +121,67 @@ const TopBar = () => {
       <div className="flex items-center justify-center gap-4 text-white text-sm py-2">
         <CustomHoverCard
           trigger={
-            <div className="flex items-center justify-center gap-1 cursor-pointer">
+            <button
+              type="button"
+              aria-label={t("pages.home.topbar.notifications")}
+              className="relative flex cursor-pointer items-center justify-center gap-1 text-white"
+            >
               <IoIosNotificationsOutline size={22} />
               <span>{t("pages.home.topbar.notifications")}</span>
-            </div>
+              {me && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-1 -top-0.5 size-2 rounded-full border border-red-primary bg-white"
+                />
+              )}
+            </button>
           }
           content={
-            <div className="flex flex-col w-full h-full">
-              <div className="flex items-center justify-center flex-9 flex-col text-sm">
-                <Image
-                  src={icon_notification}
-                  className="w-24 h-24"
-                  alt="icon-notification"
-                />
-                <span>
-                  {t("pages.home.topbar.notification.hover-title")}
-                </span>
+            me ? (
+              <div className="w-[380px] max-w-[calc(100vw-2rem)] overflow-hidden bg-white">
+                <div className="border-b px-4 py-3 text-sm text-gray-500">
+                  {t("pages.home.topbar.notification.recent-title")}
+                </div>
+                <div className="max-h-[390px] overflow-y-auto">
+                  <NotificationList />
+                </div>
+                <Link
+                  href="/user/notifications"
+                  className="flex h-10 items-center justify-center border-t text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  {t("pages.home.topbar.notification.view-all")}
+                </Link>
               </div>
-              <div className="flex items-center flex-1 w-full ">
-                <Button className="bg-gray-blackground flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
-                  {t("pages.auth.login.button-login")}
-                </Button>
-                <Button className="bg-gray-blackground flex-1 rounded-none hover:bg-gray-primary hover:text-red-primary">
-                  {t("pages.auth.register.button-register")}
-                </Button>
+            ) : (
+              <div className="flex h-[280px] w-[380px] max-w-[calc(100vw-2rem)] flex-col bg-white">
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm">
+                  <Image
+                    src={icon_notification}
+                    className="size-24"
+                    alt={t(
+                      "pages.home.topbar.notification.empty-image-alt",
+                    )}
+                  />
+                  <span>{t("pages.home.topbar.notification.hover-title")}</span>
+                </div>
+                <div className="flex">
+                  <Link
+                    href="/buyer/login?redirect=%2Fuser%2Fnotifications"
+                    className="flex-1 bg-gray-blackground py-3 text-center text-sm hover:bg-gray-primary hover:text-red-primary"
+                  >
+                    {t("pages.auth.login.button-login")}
+                  </Link>
+                  <Link
+                    href="/buyer/signup"
+                    className="flex-1 bg-gray-blackground py-3 text-center text-sm hover:bg-gray-primary hover:text-red-primary"
+                  >
+                    {t("pages.auth.register.button-register")}
+                  </Link>
+                </div>
               </div>
-            </div>
+            )
           }
-          classNameContent="w-[400px] h-[300px] bg-white !p-0 !m-0"
+          classNameContent="!w-[380px] !max-w-[calc(100vw-2rem)] !p-0 !m-0"
         />
         <div className="flex items-center justify-center gap-1">
           <MdOutlineContactSupport size={20} />

@@ -1,20 +1,22 @@
 import {
   Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
   Delete,
+  Get,
+  ParseIntPipe,
+  Post,
+  Patch,
+  Body,
+  Param,
 } from '@nestjs/common';
 import { CartService } from './cart.service';
-import { CreateCartDto } from './dto/create-cart.dto';
-import { UpdateCartDto } from './dto/update-cart.dto';
 import { Auth } from '@/common/decorators/auth.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
-import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
-import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
+import { UpdateCartItemDto } from './dto/update-cart-item.dto';
+import {
+  ApiAuthenticated,
+  ApiControllerDocs,
+} from '@/common/decorators/api-controller-docs.decorator';
 
 @ApiControllerDocs('Cart')
 @Auth()
@@ -32,6 +34,16 @@ export class CartController {
   @ApiAuthenticated()
   addItem(@CurrentUser() user, @Body() dto: AddCartItemDto) {
     return this.service.addItem(user.userId, dto);
+  }
+
+  @Patch('items/:id')
+  @ApiAuthenticated()
+  updateItem(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user,
+    @Body() dto: UpdateCartItemDto,
+  ) {
+    return this.service.updateItem(id, user.userId, dto);
   }
 
   @Delete('items/:id')

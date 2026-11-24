@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
 import { AddressService } from './address.service';
 import { CreateAddressDto } from './dto/create-address.dto';
@@ -8,6 +17,16 @@ import { UpdateAddressDto } from './dto/update-address.dto';
 @Controller('address')
 export class AddressController {
   constructor(private readonly addressService: AddressService) {}
+
+  @Get('locations/provinces')
+  listVietnamProvinces() {
+    return this.addressService.listVietnamProvinces();
+  }
+
+  @Get('locations/provinces/:provinceCode/wards')
+  listVietnamWards(@Param('provinceCode', ParseIntPipe) provinceCode: number) {
+    return this.addressService.listVietnamWards(provinceCode);
+  }
 
   @Post()
   create(@Body() createAddressDto: CreateAddressDto) {

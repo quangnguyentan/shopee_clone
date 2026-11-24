@@ -2,11 +2,12 @@
 
 import { useLanguage } from "@/src/lib/locale";
 import { useEffect, useRef, useState } from "react";
-import { CiSearch, LuShoppingCart, useShopeeLogo } from "./Icon";
+import { CiSearch, useShopeeLogo } from "./Icon";
 import TopBar from "./TopBar";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useRouter } from "next/navigation";
+import HeaderCartMenu from "./HeaderCartMenu";
 import {
   useGetTodayTopSearchQuery,
   useSuggestKeywordQuery,
@@ -120,13 +121,13 @@ const Header = () => {
                 <div className="absolute top-full left-0 w-full bg-white border shadow-md z-50">
                   {isFetching && (
                     <div className="px-4 py-2 text-sm text-gray-400">
-                      Đang tìm...
+                      {t("pages.home.header.search.loading")}
                     </div>
                   )}
 
                   {!isFetching && suggestions.length === 0 && (
                     <div className="px-4 py-2 text-sm text-gray-400">
-                      Không có gợi ý
+                      {t("pages.home.header.search.empty")}
                     </div>
                   )}
 
@@ -157,7 +158,7 @@ const Header = () => {
           </div>
 
           <div className="flex-1 flex items-center justify-center">
-            <LuShoppingCart color="white" className="w-7 h-7" />
+            <HeaderCartMenu />
           </div>
         </div>
       </header>

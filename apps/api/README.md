@@ -51,6 +51,45 @@ OpenAPI JSON document is available at `http://localhost:8080/api/docs-json`.
 Use the **Authorize** button to provide a JWT access token for endpoints marked
 with Bearer authentication. Change the port in these URLs if `PORT` is set.
 
+## Checkout and payment configuration
+
+Checkout supports COD, VNPay sandbox, MoMo sandbox, and manually confirmed
+VietQR transfers. COD is enabled by default. Configure the following variables
+in the API environment to enable the other methods:
+
+```env
+CHECKOUT_SHIPPING_FEE=0
+PAYMENT_API_PUBLIC_URL=https://your-public-api-host
+BUYER_ENV=http://localhost:3000
+VNPAY_TMN_CODE=
+VNPAY_HASH_SECRET=
+VNPAY_RETURN_URL=
+MOMO_PARTNER_CODE=
+MOMO_ACCESS_KEY=
+MOMO_SECRET_KEY=
+MOMO_REDIRECT_URL=
+MOMO_IPN_URL=
+VIETQR_BANK_ID=
+VIETQR_ACCOUNT_NUMBER=
+VIETQR_ACCOUNT_NAME=
+```
+
+`CHECKOUT_SHIPPING_FEE` is a non-negative whole-number fee in VND, charged once
+per shop in a multi-shop order. It defaults to zero; shipping carrier rates and
+fulfillment are not integrated. VNPay and MoMo require provider sandbox
+credentials. Their callbacks must reach the API over a public URL; configure
+the VNPay IPN URL in its merchant settings and the MoMo IPN URL in
+`MOMO_IPN_URL`. `PAYMENT_API_PUBLIC_URL` must be reachable by the payment
+providers.
+
+VietQR is a manual bank transfer, not a payment sandbox. Configure it only with
+an account intended to receive real transfers. Admin confirmation is required
+before the order is marked paid. Do not commit provider credentials to source
+control.
+
+Run `npm run migration:run --prefix apps/api` after deploying to add the new
+optional gender and date-of-birth fields used by buyer profiles.
+
 ## Run tests
 
 ```bash
