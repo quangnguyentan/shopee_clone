@@ -7,9 +7,12 @@ import {
   Param,
   Delete,
   Query,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { OrderService } from './order.service';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { CreateOrderDto } from './dto/create-order.dto';
 
 import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decorator';
 import { ApiExtraModels } from '@nestjs/swagger';
@@ -23,6 +26,7 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { ApiAuthenticated } from '@/common/decorators/api-controller-docs.decorator';
 import { PaginationDto } from '@/base/base.dto';
 import { UpdateSellerOrderStatusDto } from './dto/update-seller-order-status.dto';
+import { BuyerOrdersQueryDto } from './dto/buyer-orders-query.dto';
 
 @ApiExtraModels(CheckoutResponseDto, ShopOrderSummaryDto, OrderItemSummaryDto)
 @ApiControllerDocs('Orders')
@@ -32,8 +36,23 @@ export class OrderController {
 
   @Post()
   @AuthRole('buyer')
-  create() {
-    return this.orderService.create();
+  @ApiAuthenticated()
+  create(
+    @CurrentUser() user: { userId: number },
+    @Body() dto: CreateOrderDto,
+    @Req() request: Request,
+  ) {
+    return this.orderService.create(user.userId, dto, request.ip);
+  }
+
+  @AuthRole('buyer')
+  @Get('mine')
+  @ApiAuthenticated()
+  findMine(
+    @CurrentUser() user: { userId: number },
+    @Query() query: BuyerOrdersQueryDto,
+  ) {
+    return this.orderService.findMine(user.userId, query);
   }
 
   @AuthRole('admin', 'seller')

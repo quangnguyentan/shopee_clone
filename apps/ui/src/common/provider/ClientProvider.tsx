@@ -1,8 +1,11 @@
 "use client";
 import { Provider } from "react-redux";
 import { persistor, store } from "@/src/common/storage";
+import { injectStore } from "@/src/common/config/axios";
 import { PersistGate } from "redux-persist/integration/react";
 import { Loading } from "@/src/components/shared/Loading";
+
+injectStore(store);
 
 export default function ClientProvider({
   children,

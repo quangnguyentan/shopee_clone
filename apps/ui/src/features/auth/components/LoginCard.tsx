@@ -92,7 +92,16 @@ const LoginCard = () => {
       } else {
         socket.emit("register_session", response.sessionId);
       }
-      replace("/");
+      const redirect = new URLSearchParams(window.location.search).get(
+        "redirect",
+      );
+      const destination =
+        redirect?.startsWith("/") &&
+        !redirect.startsWith("//") &&
+        !redirect.includes("\\")
+          ? redirect
+          : "/";
+      replace(destination);
       toast.success(t("pages.auth.login.success.title"));
     } catch (err) {
       toast.dismiss(loadingToast);

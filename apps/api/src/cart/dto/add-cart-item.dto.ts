@@ -1,10 +1,16 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AddCartItemDto {
-  @ApiProperty({ description: 'Number of units to add.', example: 2, minimum: 1 })
-  @IsNumber()
-  @IsNotEmpty()
+  @ApiProperty({
+    description: 'Number of units to add.',
+    example: 2,
+    minimum: 1,
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   quantity: number;
 
   @ApiProperty({
@@ -12,7 +18,8 @@ export class AddCartItemDto {
     example: 103,
     minimum: 1,
   })
-  @IsNumber()
-  @IsNotEmpty()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   variant_id: number;
 }

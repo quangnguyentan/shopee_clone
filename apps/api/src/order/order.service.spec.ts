@@ -1,10 +1,16 @@
 import { ConflictException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
+import { OrderItem } from '@/order-item/entities/order-item.entity';
 import { ShopOrder } from '@/shop-order/entities/shop-order.entity';
 import { Shop } from '@/shop/entities/shop.entity';
+import { PaymentService } from '@/payment/payment.service';
+import { ConfigService } from '@nestjs/config';
 import { OrderService } from './order.service';
-import { ShopOrderStatus } from '@/common/enums/marketplace.enums';
+import {
+  OrderStatus,
+  ShopOrderStatus,
+} from '@/common/enums/marketplace.enums';
 
 describe('OrderService', () => {
   const shopRepo = { findOne: jest.fn() };
@@ -20,6 +26,8 @@ describe('OrderService', () => {
       shopOrderRepo as unknown as Repository<ShopOrder>,
       shopRepo as unknown as Repository<Shop>,
       dataSource as unknown as DataSource,
+      {} as PaymentService,
+      {} as ConfigService,
     );
   });
 
@@ -80,6 +88,105 @@ describe('OrderService', () => {
     expect(result.items[0].items[0].id).toBe('item-a');
     expect(result.items[0].total_amount).toBe('100');
     expect(result.items[0]).not.toHaveProperty('order_total_amount');
+  });
+
+  it('lists only the current buyer orders and applies pagination and status', async () => {
+    orderRepo.findAndCount.mockResolvedValue([[], 0]);
+
+    await expect(
+      service.findMine(9, {
+        page: 2,
+        limit: 5,
+        status: OrderStatus.COMPLETED,
+      }),
+    ).resolves.toEqual({
+      items: [],
+      total: 0,
+      page: 2,
+      limit: 5,
+    });
+    expect(orderRepo.findAndCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { buyer_id: '9', status: OrderStatus.COMPLETED },
+        take: 5,
+        skip: 5,
+      }),
+    );
+  });
+
+  it('stores decimal prices returned by PostgreSQL as fixed-point strings', async () => {
+    const variant = {
+      id: 'variant-1',
+      product_id: 'product-1',
+      price: '1496.00',
+      stock: 2,
+      sku: 'SKU-1',
+    };
+    const product = {
+      id: 'product-1',
+      name: 'Product',
+      status: 'active',
+      shop_id: '11',
+      shop: { id: '11', status: 'active' },
+      images: [],
+    };
+    const manager = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce({ id: 'cart-1' })
+        .mockResolvedValueOnce(variant)
+        .mockResolvedValueOnce(product),
+      find: jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            id: '3',
+            product_variant: { id: variant.id },
+            quantity: 1,
+          },
+        ])
+        .mockResolvedValueOnce([]),
+      create: jest.fn((_entity, value) => value),
+      save: jest.fn(async (entity, value) => {
+        if (entity === Order) return { ...value, id: 'order-1' };
+        if (entity === ShopOrder) return { ...value, id: 'shop-order-1' };
+        return value;
+      }),
+      delete: jest.fn(),
+    };
+    dataSource.transaction.mockImplementation((work) => work(manager));
+    const paymentService = {
+      isMethodAvailable: jest.fn().mockReturnValue(true),
+      initializeCheckoutPayment: jest.fn().mockResolvedValue({}),
+      failPendingOrder: jest.fn(),
+    };
+    service = new OrderService(
+      orderRepo as unknown as Repository<Order>,
+      shopOrderRepo as unknown as Repository<ShopOrder>,
+      shopRepo as unknown as Repository<Shop>,
+      dataSource as unknown as DataSource,
+      paymentService as unknown as PaymentService,
+      { get: jest.fn().mockReturnValue('0') } as unknown as ConfigService,
+    );
+
+    await service.create(14, {
+      shipping_address: {
+        receiver_name: 'Buyer',
+        phone: '0123456789',
+        province_code: 1,
+        province_name: 'Hanoi',
+        ward_code: 1,
+        ward_name: 'Ward',
+        address: 'Street',
+      },
+      payment_method: 'cod',
+      selected_item_ids: ['3'],
+    });
+
+    const savedOrderItems = manager.save.mock.calls.find(
+      ([entity]) => entity === OrderItem,
+    );
+    expect(savedOrderItems?.[1][0].price).toBe('1496.00');
   });
 
   it('rejects seller status jumps that skip the allowed workflow', async () => {

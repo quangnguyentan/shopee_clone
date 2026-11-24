@@ -45,7 +45,7 @@ export const VerifyEmailRequiredCard = ({ email }: Props) => {
   return (
     <Card className="w-full max-w-[25rem] absolute top-1/2 right-0 -translate-y-1/2 shadow-lg bg-white rounded-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-medium text-red-primary">
+        <CardTitle className="text-xl font-medium text-red-primary ">
           Verify your email
         </CardTitle>
       </CardHeader>
