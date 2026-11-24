@@ -48,6 +48,12 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   phone: string;
 
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  gender: 'male' | 'female' | 'other' | null;
+
+  @Column({ type: 'date', nullable: true })
+  date_of_birth: string | null;
+
   @DeleteDateColumn({ type: 'timestamptz', nullable: true })
   deleted_at: Date | null;
 

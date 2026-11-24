@@ -20,6 +20,19 @@ export const userApi = baseApi
           { type: "User", id: "ME" },
         ],
       }),
+      updateMyProfile: builder.mutation<
+        User,
+        Partial<
+          Pick<User, "name" | "phone" | "avatar" | "gender" | "date_of_birth">
+        >
+      >({
+        query: (data) => ({
+          url: "/user/me",
+          method: "PATCH",
+          data,
+        }),
+        invalidatesTags: [{ type: "User", id: "ME" }],
+      }),
       getAllUsers: builder.query<PaginatedResponse<User>, void>({
         query: () => ({
           url: "/user",
@@ -79,6 +92,7 @@ export const userApi = baseApi
 
 export const {
   useGetMeQuery,
+  useUpdateMyProfileMutation,
   useGetAllUsersQuery,
   useGetUserByIdQuery,
   useCreateUserMutation,

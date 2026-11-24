@@ -13,7 +13,12 @@ export const AUTH_ROUTES = [
   "/buyer/signup",
   "/buyer/verify-email",
 ];
-export const PROTECTED_ROUTES = ["/profile", "/orders", "/cart"];
+export const PROTECTED_ROUTES = [
+  "/profile",
+  "/orders",
+  "/cart",
+  "/user/notifications",
+];
 
 export type LanguageKeys = "vi" | "en";
 

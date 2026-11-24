@@ -8,6 +8,8 @@ export interface User {
   name: string | null;
   avatar: string | null;
   phone?: string | null;
+  gender?: "male" | "female" | "other" | null;
+  date_of_birth?: string | null;
   role?: UserRole;
   auth_provider?: AuthProvider;
   two_factor_enabled?: boolean;
