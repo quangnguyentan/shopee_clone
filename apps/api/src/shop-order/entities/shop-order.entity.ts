@@ -6,6 +6,7 @@ import {
 import { OrderItem } from 'src/order-item/entities/order-item.entity';
 import { Order } from 'src/order/entities/order.entity';
 import { OrderStatusHistory } from 'src/order-status-history/entities/order-status-history.entity';
+import { Shipping } from 'src/shipping/entities/shipping.entity';
 import { Shop } from 'src/shop/entities/shop.entity';
 import {
   Check,
@@ -81,6 +82,9 @@ export class ShopOrder {
 
   @OneToMany(() => OrderStatusHistory, (history) => history.shop_order)
   status_history: OrderStatusHistory[];
+
+  @OneToMany(() => Shipping, (shipping) => shipping.shop_order)
+  shippings: Shipping[];
 
   @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
