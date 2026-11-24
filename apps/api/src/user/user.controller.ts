@@ -20,6 +20,7 @@ import { ApiControllerDocs } from '@/common/decorators/api-controller-docs.decor
 import { ManagedUsersQueryDto } from './dto/managed-users-query.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 
 @ApiControllerDocs('Users')
 @Controller('user')
@@ -47,6 +48,16 @@ export class UserController extends BaseController<User> {
   @ApiAuthenticated()
   getMe(@CurrentUser() user) {
     return this.service.getMe(user.userId);
+  }
+
+  @Auth()
+  @Patch('me')
+  @ApiAuthenticated()
+  updateMe(
+    @CurrentUser() user,
+    @Body() dto: UpdateMyProfileDto,
+  ) {
+    return this.service.updateMyProfile(user.userId, dto);
   }
 
   @AuthRole('admin')

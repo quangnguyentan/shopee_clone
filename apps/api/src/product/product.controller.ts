@@ -21,6 +21,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { AuthRole } from '@/common/decorators/auth-role.decorator';
 import { CreateProductWithVariantDto } from './dto/create-product-full.dto';
 import { PaginationDto } from '@/base/base.dto';
+import { BuyerProductsQueryDto } from './dto/buyer-products-query.dto';
 import { OptionalAuth } from '@/common/decorators/optional-auth.decorator';
 import { RecommendationClient } from '@/recommendation/recommendation.client';
 import { RecommendationFilterDto } from '@/recommendation/dto/recommendation-filter.dto';
@@ -67,8 +68,66 @@ export class ProductController extends BaseController<Product> {
     return this.service.deleteProduct(+id, user);
   }
   @Get('buyer')
-  findAllView(@Query() query: PaginationDto) {
-    return this.service.findAllView(query);
+  findAllView(@Query() query: BuyerProductsQueryDto) {
+    if (
+      query.min_price !== undefined &&
+      query.max_price !== undefined &&
+      query.min_price > query.max_price
+    ) {
+      throw new BadRequestException('Invalid product price range');
+    }
+    const attributeFilters = this.parseAttributeFilters(
+      query.attribute_filters,
+    );
+
+    return this.service.findAllView(
+      query,
+      query.category_id?.toString(),
+      query.min_price,
+      query.max_price,
+      {
+        minRating: query.min_rating,
+        mallOnly: query.mall_only,
+        discountedOnly: query.discounted_only,
+        inStock: query.in_stock,
+        attributeFilters,
+        sort: query.sort,
+      },
+    );
+  }
+
+  private parseAttributeFilters(value?: string) {
+    if (!value) return [];
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      throw new BadRequestException('Invalid attribute filters');
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new BadRequestException('Invalid attribute filters');
+    }
+
+    const filters = Object.entries(parsed);
+    if (filters.length > 20) {
+      throw new BadRequestException('Too many attribute filters');
+    }
+
+    return filters.map(([attributeId, valueIds]) => {
+      if (
+        !/^[1-9]\d*$/.test(attributeId) ||
+        !Array.isArray(valueIds) ||
+        valueIds.length === 0 ||
+        valueIds.length > 50 ||
+        valueIds.some((id) => typeof id !== 'string' || !/^[1-9]\d*$/.test(id))
+      ) {
+        throw new BadRequestException('Invalid attribute filters');
+      }
+
+      return { attributeId, valueIds };
+    });
   }
   @Get('buyer/:id')
   async viewProduct(
@@ -88,10 +147,21 @@ export class ProductController extends BaseController<Product> {
     const product = await this.service.viewProduct(id);
     if (!product) return product;
 
-    const similar_products = await this.recommendations.getSimilarProducts(
+    const recommendationResults = await this.recommendations.getSimilarProducts(
       id,
       filters,
     );
+    let similar_products = await this.service.findRecommendedProducts(
+      recommendationResults.map(({ product_id }) => product_id),
+      id,
+    );
+    if (similar_products.length === 0) {
+      similar_products = await this.service.findRelatedProducts(
+        id,
+        product.category_id,
+        product.shop_id,
+      );
+    }
     return { ...product, similar_products };
   }
 

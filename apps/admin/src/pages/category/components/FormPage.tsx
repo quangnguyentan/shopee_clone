@@ -6,12 +6,14 @@ import {
   useCreateCategoryMutation,
   useGetAllCategoriesQuery,
   useGetCategoryByIdQuery,
+  useUpdateCategoryMutation,
 } from "@/common/api/category.api";
 import type { CategoryFormValues } from "../types";
 import type { UploadFileWithExtra } from "@/components/Uploader";
 import Uploader from "@/components/Uploader";
 import { useUploadSingleAssetMutation } from "@/common/api/asset.api";
 import { buildCategoryTree } from "../utils/helper";
+import { getApiErrorMessage } from "@/common/helper/getApiErrorMessage";
 
 const FormPage = () => {
   const { id } = useParams();
@@ -27,7 +29,11 @@ const FormPage = () => {
   const categories = data?.items;
   const [createCategory, { isLoading: isCreating }] =
     useCreateCategoryMutation();
-  const [uploadSingleAsset] = useUploadSingleAssetMutation();
+  const [updateCategory, { isLoading: isUpdating }] =
+    useUpdateCategoryMutation();
+  const [uploadSingleAsset, { isLoading: isUploadingImage }] =
+    useUploadSingleAssetMutation();
+  const isSaving = isCreating || isUpdating || isUploadingImage;
 
   useEffect(() => {
     if (isEdit && category) {
@@ -70,18 +76,23 @@ const FormPage = () => {
 
       const payload = {
         name: values.name,
-        parent_id: Number(values.parent_id),
+        ...(values.parent_id != null
+          ? { parent_id: Number(values.parent_id) }
+          : {}),
         imageUrl,
       };
 
-      if (!isEdit) {
+      if (isEdit) {
+        if (!id) throw new Error("Category ID is required for update");
+        await updateCategory({ id, body: payload }).unwrap();
+      } else {
         await createCategory(payload).unwrap();
       }
       message.success(isEdit ? "Updated successfully" : "Created successfully");
       navigate("/categories");
     } catch (error) {
       console.error(error);
-      message.error("Submit failed");
+      message.error(getApiErrorMessage(error, "Submit failed"));
     }
   };
 
@@ -112,10 +123,10 @@ const FormPage = () => {
 
       <Form.Item>
         <Space className="flex justify-end w-full">
-          <Button onClick={() => navigate("/categories")} loading={isCreating}>
+          <Button onClick={() => navigate("/categories")} loading={isSaving}>
             Cancel
           </Button>
-          <Button type="primary" htmlType="submit" loading={isCreating}>
+          <Button type="primary" htmlType="submit" loading={isSaving}>
             {isEdit ? "Update" : "Create"}
           </Button>
         </Space>

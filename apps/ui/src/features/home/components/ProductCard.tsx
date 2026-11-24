@@ -1,58 +1,88 @@
 import Image from "next/image";
-import React, { useMemo } from "react";
-import { Product } from "../types/product.type";
-import voucher from "@/src/assest/voucher.png";
+import Link from "next/link";
+import type { Product } from "@/src/common/types/product.type";
+import { formatCurrency } from "@/src/common/helper/formatCurrency";
+import { formatSold } from "@/src/common/helper/formatSold";
 import { getAssetUrl } from "@/src/lib/assets";
 
+type ProductCardProduct = Pick<
+  Product,
+  "id" | "name" | "price_min" | "price_max" | "sold_count" | "images"
+> & {
+  display_price?: number;
+  discount_percent?: number | null;
+  rating_avg?: number;
+  rating_count?: number;
+};
+
 interface ProductCardProps {
-  product: Product;
+  product: ProductCardProduct;
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
-  const filterPrimaryImage = useMemo(() => {
-    return product?.images?.filter((i) => i.is_primary);
-  }, [product]);
+  const image =
+    product.images?.find((item) => item.is_primary) ?? product.images?.[0];
+  const imageUrl = getAssetUrl(image?.thumbnail ?? image?.original);
+  const price = product.display_price ?? product.price_min;
+  const discount =
+    product.discount_percent ??
+    (product.price_min > 0 && price < product.price_min
+      ? Math.round(((product.price_min - price) / product.price_min) * 100)
+      : 0);
+
   return (
-    <div className="flex flex-col cursor-pointer hover:shadow-lg transition bg-white hover:-translate-y-[1px] h-[328px] rounded-md">
-      <div className="relative w-full h-2/3">
-        <Image
-          src={getAssetUrl(filterPrimaryImage[0]?.original) ?? ""}
-          alt={product.name}
-          fill
-          className="object-cover w-full h-full rounded-md"
-        />
-
-        <div className="absolute top-0 right-0 text-xs text-red-primary bg-discount py-1 px-2 rounded-tr-md rounded-bl-md">
-          <span>-25%</span>
-        </div>
-
-        <div className="absolute bottom-0 w-full h-full">
-          <Image src={voucher} alt="voucher" className="w-full h-full" />
-        </div>
-      </div>
-
-      <div className="px-2 py-2 flex flex-col gap-1">
-        <span className="text-sm line-clamp-2">{product?.name}</span>
-        <div className="flex items-center justify-center gap-1">
-          <div className="rounded-md border border-red-rgb flex-1 flex items-center justify-center">
-            <span className="text-red-rgb text-[10px]">Rẻ vô địch</span>
+    <Link
+      href={`/product/${product.id}`}
+      className="group flex min-w-0 flex-col overflow-hidden border border-transparent bg-white transition hover:-translate-y-0.5 hover:border-red-primary hover:shadow-md"
+    >
+      <div className="relative aspect-square w-full overflow-hidden bg-gray-100">
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={product.name}
+            fill
+            unoptimized
+            className="object-cover transition group-hover:scale-[1.02]"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs text-gray-400">
+            Chưa có hình ảnh
           </div>
-          <div className="rounded-md border border-red-rgb flex-1 flex items-center justify-center px-2">
-            <span className="text-red-rgb text-[10px] line-clamp-1">
-              2?.??9₫ 15.1 lúc 00:00 Th01 15
+        )}
+        {discount > 0 && (
+          <span className="absolute right-0 top-0 bg-yellow-300/95 px-1.5 py-1 text-center text-[10px] font-medium leading-3 text-red-primary">
+            <span className="block">-{discount}%</span>
+            <span className="text-red-700">GIẢM</span>
+          </span>
+        )}
+        <span className="absolute bottom-0 left-0 bg-red-primary px-2 py-0.5 text-[10px] font-medium uppercase text-white">
+          Yêu thích
+        </span>
+      </div>
+      <div className="flex min-h-[112px] flex-1 flex-col justify-between p-2">
+        <h3 className="line-clamp-2 min-h-10 text-xs leading-5 text-gray-800">
+          {product.name}
+        </h3>
+        {typeof product.rating_avg === "number" &&
+          (product.rating_count ?? 0) > 0 && (
+            <span className="mt-1 text-[10px] text-amber-500">
+              ★ {product.rating_avg.toFixed(1)}
+            </span>
+          )}
+        <div className="mt-2 flex items-center justify-between gap-1">
+          <div className="flex min-w-0 items-baseline gap-1 text-red-primary">
+            <span className="text-[10px]">₫</span>
+            <span className="truncate text-base font-medium">
+              {formatCurrency(price)}
             </span>
           </div>
-        </div>
-        <div className="flex justify-between">
-          <div className="flex flex-col">
-            <span className="text-red-500 font-medium text-base line-clamp-1">
-              {product.price_max.toLocaleString()}₫
-            </span>
-          </div>
-          <span className="text-xs">Đã bán 10k+</span>
+          <span className="shrink-0 text-[10px] text-gray-500">
+            Đã bán {formatSold(product.sold_count)}
+          </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 

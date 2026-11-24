@@ -50,4 +50,46 @@ describe('UserService management', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(userRepo.save).not.toHaveBeenCalled();
   });
+
+  it('updates only the current user profile fields', async () => {
+    userRepo.findOneBy.mockResolvedValue({
+      id: 'buyer-1',
+      name: 'Old name',
+      phone: '',
+    });
+    userRepo.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'buyer-1',
+        email: 'buyer@example.com',
+        name: 'New name',
+        phone: '0912345678',
+        gender: 'female',
+        date_of_birth: '1998-06-15',
+      });
+
+    await expect(
+      service.updateMyProfile(1, {
+        name: 'New name',
+        phone: '0912345678',
+        gender: 'female',
+        date_of_birth: '1998-06-15',
+        gender: 'female',
+        date_of_birth: '1998-06-15',
+      }),
+    ).resolves.toMatchObject({
+      id: 'buyer-1',
+      name: 'New name',
+      phone: '0912345678',
+    });
+    expect(userRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'buyer-1',
+        name: 'New name',
+        phone: '0912345678',
+        gender: 'female',
+        date_of_birth: '1998-06-15',
+      }),
+    );
+  });
 });

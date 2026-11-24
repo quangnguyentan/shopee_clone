@@ -34,6 +34,7 @@ import { buildCategoryTree } from "@/pages/category/utils/helper";
 import { useAppSelector } from "@/common/hooks/useAppSelector";
 import Editor, { type QuillEditorRef } from "@/components/Editor";
 import { uploadImagesInHtml } from "../../../common/utils/uploadImagesInHtml";
+import { getApiErrorMessage } from "@/common/helper/getApiErrorMessage";
 import {
   mapImagesToUpload,
   normalizeImages,
@@ -238,7 +239,7 @@ const FormPage = () => {
       navigate("/products");
     } catch (e) {
       console.error(e);
-      message.error("Submit failed");
+      message.error(getApiErrorMessage(e, "Submit failed"));
     }
   };
 

@@ -69,7 +69,11 @@ export class ProductReviewService {
     });
   }
 
-  async findAllPublic(query: PaginationDto, productId?: string) {
+  async findAllPublic(
+    query: PaginationDto,
+    productId?: string,
+    rating?: number,
+  ) {
     const page = query?.page ?? 1;
     const limit = Math.min(query?.limit ?? 20, 100);
     const builder = this.reviewRepo
@@ -82,12 +86,28 @@ export class ProductReviewService {
     if (productId) {
       builder.andWhere('review.product_id = :productId', { productId });
     }
+    if (rating !== undefined) {
+      builder.andWhere('review.rating = :rating', { rating });
+    }
     const [reviews, total] = await builder.getManyAndCount();
+    const ratingBreakdown = productId
+      ? await this.reviewRepo
+          .createQueryBuilder('rating_review')
+          .select('rating_review.rating', 'rating')
+          .addSelect('COUNT(rating_review.id)', 'count')
+          .where('rating_review.product_id = :productId', { productId })
+          .groupBy('rating_review.rating')
+          .getRawMany<{ rating: string; count: string }>()
+      : [];
+
     return {
       items: reviews.map((review) => this.toPublicReview(review)),
       total,
       page,
       limit,
+      rating_breakdown: Object.fromEntries(
+        ratingBreakdown.map(({ rating, count }) => [rating, Number(count)]),
+      ),
     };
   }
 

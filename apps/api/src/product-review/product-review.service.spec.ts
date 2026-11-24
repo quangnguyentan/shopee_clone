@@ -8,6 +8,66 @@ import { ProductReview } from './entities/product-review.entity';
 import { ProductReviewService } from './product-review.service';
 
 describe('ProductReviewService ownership', () => {
+  it('filters public product reviews by rating and returns a product rating breakdown', async () => {
+    const reviewBuilder = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue([
+        [
+          {
+            id: 'review-1',
+            product_id: '35',
+            rating: 5,
+            comment: 'Great',
+            shop_reply: null,
+            shop_replied_at: null,
+            created_at: new Date(),
+            user: { name: 'Buyer', avatar: null },
+          },
+        ],
+        1,
+      ]),
+    };
+    const ratingBuilder = {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([
+        { rating: '5', count: '3' },
+        { rating: '4', count: '1' },
+      ]),
+    };
+    const reviewRepo = {
+      createQueryBuilder: jest
+        .fn()
+        .mockReturnValueOnce(reviewBuilder)
+        .mockReturnValueOnce(ratingBuilder),
+    };
+    const service = new ProductReviewService(
+      reviewRepo as unknown as Repository<ProductReview>,
+      {} as Repository<OrderItem>,
+      {} as Repository<Product>,
+      {} as Repository<Shop>,
+    );
+
+    const result = await service.findAllPublic({ page: 1, limit: 8 }, '35', 5);
+
+    expect(reviewBuilder.andWhere).toHaveBeenCalledWith(
+      'review.product_id = :productId',
+      { productId: '35' },
+    );
+    expect(reviewBuilder.andWhere).toHaveBeenCalledWith(
+      'review.rating = :rating',
+      { rating: 5 },
+    );
+    expect(result.rating_breakdown).toEqual({ 5: 3, 4: 1 });
+    expect(result.total).toBe(1);
+  });
+
   it('creates a verified review and refreshes the product rating', async () => {
     const item = {
       id: 'order-item-1',

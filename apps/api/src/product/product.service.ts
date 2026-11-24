@@ -22,8 +22,18 @@ import { generateCombinations } from '@/common/utils/generateCombinations';
 import { Shop } from '@/shop/entities/shop.entity';
 import { slugify } from '@/common/utils/slug.util';
 import { createProductVariantSignature } from '@/common/utils/product-variant-signature.util';
+import type { BuyerProductSort } from './dto/buyer-products-query.dto';
 
 type ProductManager = { userId: number; role: 'admin' | 'seller' };
+
+interface BuyerProductFilters {
+  minRating?: number;
+  mallOnly?: boolean;
+  discountedOnly?: boolean;
+  inStock?: boolean;
+  attributeFilters?: { attributeId: string; valueIds: string[] }[];
+  sort?: BuyerProductSort;
+}
 
 @Injectable()
 export class ProductService extends BaseService<Product> {
@@ -76,7 +86,10 @@ export class ProductService extends BaseService<Product> {
       relations: ['shop', 'shop.user'],
     });
     if (!product) throw new NotFoundException('Product not found');
-    if (user.role === 'seller' && product.shop.user.id !== String(user.userId)) {
+    if (
+      user.role === 'seller' &&
+      product.shop.user.id !== String(user.userId)
+    ) {
       throw new ForbiddenException('No permission to access this product');
     }
     return product;
@@ -113,9 +126,7 @@ export class ProductService extends BaseService<Product> {
       shop: targetShop,
       shop_id: targetShop.id,
       category_id:
-        category_id === undefined
-          ? product.category_id
-          : String(category_id),
+        category_id === undefined ? product.category_id : String(category_id),
       is_active:
         dto.status === undefined ? product.is_active : dto.status === 'active',
     });
@@ -162,21 +173,96 @@ export class ProductService extends BaseService<Product> {
     if (user) await this.assertProductAccess(id, user);
     const product = await this.repo.findOne({
       where: { id: String(id) },
-      relations: ['shop', 'images', 'variants', 'category'],
+      relations: [
+        'shop',
+        'images',
+        'variants',
+        'variants.attributes',
+        'variants.attributes.attribute',
+        'variants.attributes.value',
+        'category',
+        'category.parent',
+      ],
     });
     if (!product) throw new NotFoundException('Product not found');
     return product;
   }
 
-  async findAllView(query?: PaginationDto) {
+  async findRecommendedProducts(productIds: number[], excludeId: number) {
+    const ids = [...new Set(productIds.map(String))].filter(
+      (id) => id !== String(excludeId),
+    );
+    if (ids.length === 0) return [];
+
+    const products = await this.repo.find({
+      where: { id: In(ids), status: 'active' } as any,
+      relations: ['images', 'shop'],
+    });
+    const byId = new Map(products.map((product) => [product.id, product]));
+    return ids
+      .map((id) => byId.get(id))
+      .filter((product): product is Product => product !== undefined)
+      .map((product) => ({
+        ...product,
+        images: product.images.map((image) => ({
+          id: image.id,
+          is_primary: image.is_primary,
+          ...mapProductImageVariants(image.url),
+        })),
+      }));
+  }
+
+  async findRelatedProducts(
+    productId: number,
+    categoryId: string | null,
+    shopId: string,
+    limit = 10,
+  ) {
+    const builder = this.repo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.images', 'img')
+      .leftJoinAndSelect('p.shop', 'shop')
+      .where('p.id != :productId', { productId: String(productId) })
+      .andWhere('p.status = :status', { status: 'active' });
+
+    if (categoryId) {
+      builder.andWhere('p.category_id = :categoryId', { categoryId });
+    } else {
+      builder.andWhere('p.shop_id = :shopId', { shopId });
+    }
+
+    const products = await builder
+      .orderBy('p.sold_count', 'DESC')
+      .addOrderBy('p.id', 'DESC')
+      .take(limit)
+      .getMany();
+
+    return products.map((product) => ({
+      ...product,
+      images: product.images.map((image) => ({
+        id: image.id,
+        is_primary: image.is_primary,
+        ...mapProductImageVariants(image.url),
+      })),
+    }));
+  }
+
+  async findAllView(
+    query?: PaginationDto,
+    categoryId?: string,
+    minPrice?: number,
+    maxPrice?: number,
+    filters: BuyerProductFilters = {},
+  ) {
     const page = query?.page ?? 1;
     const limit = query?.limit ?? 20;
     const skip = (page - 1) * limit;
     const now = new Date();
 
-    const [items, total] = await this.repo
+    const queryBuilder = this.repo
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.images', 'img')
+      .leftJoin('p.shop', 'shop')
       .leftJoin('p.variants', 'v')
       .leftJoin(
         'flash_sale_items',
@@ -200,9 +286,11 @@ export class ProductService extends BaseService<Product> {
       .where('p.status = :status', { status: 'active' })
       .select([
         'p.id',
+        'p.created_at',
         'p.name',
         'p.price_min',
         'p.price_max',
+        'p.view_count',
         'p.sold_count',
         'img.id',
         'img.url',
@@ -211,8 +299,73 @@ export class ProductService extends BaseService<Product> {
         'fsi.discount_percent',
       ])
       .take(limit)
-      .skip(skip)
-      .orderBy('p.id', 'DESC')
+      .skip(skip);
+
+    if (categoryId !== undefined) {
+      queryBuilder.andWhere(
+        `p.category_id IN (
+          WITH RECURSIVE category_tree AS (
+            SELECT id FROM categories WHERE id = :categoryId
+            UNION ALL
+            SELECT child.id
+            FROM categories child
+            INNER JOIN category_tree parent ON child.parent_id = parent.id
+          )
+          SELECT id FROM category_tree
+        )`,
+        { categoryId },
+      );
+    }
+    if (minPrice !== undefined) {
+      queryBuilder.andWhere('p.price_max >= :minPrice', { minPrice });
+    }
+    if (maxPrice !== undefined) {
+      queryBuilder.andWhere('p.price_min <= :maxPrice', { maxPrice });
+    }
+    if (filters.minRating !== undefined) {
+      queryBuilder.andWhere('p.rating_avg >= :minRating', {
+        minRating: filters.minRating,
+      });
+    }
+    if (filters.mallOnly) {
+      queryBuilder.andWhere('shop.is_mall = true');
+    }
+    if (filters.discountedOnly) {
+      queryBuilder.andWhere('fsi.discount_percent > 0');
+    }
+    if (filters.inStock) {
+      queryBuilder.andWhere('p.stock > 0');
+    }
+    filters.attributeFilters?.forEach(({ attributeId, valueIds }, index) => {
+      queryBuilder.andWhere(
+        `EXISTS (
+          SELECT 1
+          FROM product_variants filter_variant
+          INNER JOIN product_variant_attributes filter_attribute
+            ON filter_attribute.variant_id = filter_variant.id
+          WHERE filter_variant.product_id = p.id
+            AND filter_attribute.attribute_id = :attributeId${index}
+            AND filter_attribute.value_id IN (:...valueIds${index})
+        )`,
+        {
+          [`attributeId${index}`]: attributeId,
+          [`valueIds${index}`]: valueIds,
+        },
+      );
+    });
+
+    const sort = filters.sort ?? 'popular';
+    const sortColumns: Record<BuyerProductSort, [string, 'ASC' | 'DESC']> = {
+      popular: ['p.view_count', 'DESC'],
+      latest: ['p.created_at', 'DESC'],
+      sales: ['p.sold_count', 'DESC'],
+      'price-asc': ['p.price_min', 'ASC'],
+      'price-desc': ['p.price_min', 'DESC'],
+    };
+    const [sortColumn, sortDirection] = sortColumns[sort];
+    const [items, total] = await queryBuilder
+      .orderBy(sortColumn, sortDirection)
+      .addOrderBy('p.id', 'DESC')
       .getManyAndCount();
 
     return {
@@ -233,8 +386,7 @@ export class ProductService extends BaseService<Product> {
   }
 
   async findOneView(id: number) {
-    const product = await super.findOneById(id);
-    if (!product) return null;
+    const product = await this.findOneById(id);
 
     return {
       ...product,
@@ -247,7 +399,10 @@ export class ProductService extends BaseService<Product> {
     };
   }
 
-  async createFullProduct(user: ProductManager, dto: CreateProductWithVariantDto) {
+  async createFullProduct(
+    user: ProductManager,
+    dto: CreateProductWithVariantDto,
+  ) {
     return this.repo.manager.transaction(async (manager) => {
       const combinations = generateCombinations(dto.attributes);
 
@@ -262,8 +417,8 @@ export class ProductService extends BaseService<Product> {
         user.role === 'admin'
           ? await manager.findOne(Shop, { where: { id: String(dto.shop_id) } })
           : await manager.findOne(Shop, {
-              where: { user: { id: String(user.userId) } },
-            });
+            where: { user: { id: String(user.userId) } },
+          });
       if (!shop) {
         throw new ForbiddenException(
           user.role === 'seller' ? 'Seller has no shop' : 'Shop not found',
@@ -349,8 +504,7 @@ export class ProductService extends BaseService<Product> {
             sku,
             price: variantInput.price,
             stock: variantInput.stock,
-            attribute_signature:
-              createProductVariantSignature(signatureParts),
+            attribute_signature: createProductVariantSignature(signatureParts),
           }),
         );
 
@@ -515,8 +669,7 @@ export class ProductService extends BaseService<Product> {
             sku,
             price: variantInput.price,
             stock: variantInput.stock,
-            attribute_signature:
-              createProductVariantSignature(signatureParts),
+            attribute_signature: createProductVariantSignature(signatureParts),
           }),
         );
 
