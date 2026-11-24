@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useGetCategoryTreeQuery } from "@/src/common/api/category.api";
 import { useGetCategoryAttributeByCategoryQuery } from "@/src/common/api/category-attribute.api";
+import { useGetVietnamProvincesQuery } from "@/src/common/api/checkout.api";
 import type { Category } from "@/src/common/types/category.type";
 import type { CategoryAttribute } from "@/src/common/types/category-attribute.type";
 import { createShopeeSlug } from "@/src/lib/utils";
@@ -27,6 +28,24 @@ const findCategory = (
   return undefined;
 };
 
+const findCategoryPath = (
+  categories: Category[],
+  categoryId: string,
+  parents: Category[] = [],
+): Category[] => {
+  for (const category of categories) {
+    const path = [...parents, category];
+    if (category.id === categoryId) return path;
+    const childPath = findCategoryPath(
+      category.children ?? [],
+      categoryId,
+      path,
+    );
+    if (childPath.length) return childPath;
+  }
+  return [];
+};
+
 const FilterSidebar = ({
   categoryId,
   filters,
@@ -37,6 +56,7 @@ const FilterSidebar = ({
     { categoryId: Number(categoryId) },
     { skip: !Number.isInteger(Number(categoryId)) },
   );
+  const { data: provinces = [] } = useGetVietnamProvincesQuery();
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [priceError, setPriceError] = useState("");
@@ -46,6 +66,8 @@ const FilterSidebar = ({
   const [mallOnly, setMallOnly] = useState(filters.mallOnly);
   const [discountedOnly, setDiscountedOnly] = useState(filters.discountedOnly);
   const [inStock, setInStock] = useState(filters.inStock);
+  const [provinceCodes, setProvinceCodes] = useState(filters.provinceCodes);
+  const [showAllProvinces, setShowAllProvinces] = useState(false);
   const [attributeFilters, setAttributeFilters] = useState<
     Record<string, string[]>
   >(filters.attributeFilters);
@@ -53,6 +75,21 @@ const FilterSidebar = ({
     () => findCategory(categoryTree, categoryId),
     [categoryTree, categoryId],
   );
+  const categoryPath = useMemo(
+    () => findCategoryPath(categoryTree, categoryId),
+    [categoryTree, categoryId],
+  );
+  const visibleProvinces = showAllProvinces
+    ? provinces
+    : provinces.slice(0, 5);
+
+  const toggleProvince = (code: number) => {
+    setProvinceCodes((current) =>
+      current.includes(code)
+        ? current.filter((value) => value !== code)
+        : [...current, code],
+    );
+  };
 
   const toggleAttributeValue = (
     attribute: CategoryAttribute,
@@ -89,6 +126,7 @@ const FilterSidebar = ({
       mallOnly,
       discountedOnly,
       inStock,
+      provinceCodes,
       attributeFilters: Object.fromEntries(
         Object.entries(attributeFilters).filter(([, values]) => values.length),
       ),
@@ -103,11 +141,13 @@ const FilterSidebar = ({
     setMallOnly(false);
     setDiscountedOnly(false);
     setInStock(false);
+    setProvinceCodes([]);
     setAttributeFilters({});
     onApplyFilters({
       mallOnly: false,
       discountedOnly: false,
       inStock: false,
+      provinceCodes: [],
       attributeFilters: {},
     });
   };
@@ -119,14 +159,15 @@ const FilterSidebar = ({
           <span aria-hidden="true">☷</span>
           Tất cả danh mục
         </h2>
-        {category?.parent && (
+        {categoryPath.slice(0, -1).map((ancestor) => (
           <Link
-            href={`/${createShopeeSlug(category.parent.name, "cat", category.parent.id)}`}
+            key={ancestor.id}
+            href={`/${createShopeeSlug(ancestor.name, "cat", ancestor.id)}`}
             className="mb-2 block text-gray-600 hover:text-red-primary"
           >
-            ‹ {category.parent.name}
+            ‹ {ancestor.name}
           </Link>
-        )}
+        ))}
         <div className="space-y-2 border-l border-gray-200 pl-3">
           <span className="block font-medium text-red-primary">
             {category?.name ?? "Danh mục"}
@@ -182,6 +223,37 @@ const FilterSidebar = ({
         >
           Áp dụng
         </button>
+      </section>
+
+      <div className="border-t border-gray-100" />
+
+      <section>
+        <h3 className="mb-2 font-medium">Nơi bán</h3>
+        <div className="space-y-2">
+          {visibleProvinces.map((province) => (
+            <label
+              key={province.code}
+              className="flex cursor-pointer items-center gap-2 text-gray-600"
+            >
+              <input
+                type="checkbox"
+                checked={provinceCodes.includes(province.code)}
+                onChange={() => toggleProvince(province.code)}
+                className="accent-red-primary"
+              />
+              <span>{province.name}</span>
+            </label>
+          ))}
+        </div>
+        {provinces.length > 5 && (
+          <button
+            type="button"
+            onClick={() => setShowAllProvinces((current) => !current)}
+            className="mt-2 text-xs text-gray-500 hover:text-red-primary"
+          >
+            {showAllProvinces ? "Thu gọn" : "Xem thêm"}
+          </button>
+        )}
       </section>
 
       <div className="border-t border-gray-100" />

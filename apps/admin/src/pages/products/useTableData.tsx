@@ -85,6 +85,13 @@ const useTableData = () => {
       },
       {
         width: 200,
+        title: "Shop Province / City",
+        dataIndex: ["shop", "province_name"],
+        render: (_: unknown, record: Product) =>
+          record.shop?.province_name || "Not set",
+      },
+      {
+        width: 200,
         title: "Primary Image",
         render: (_: unknown, record: Product) =>
           record?.images?.map((img) =>

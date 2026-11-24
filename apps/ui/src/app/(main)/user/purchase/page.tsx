@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
+  useCompleteMyShopOrderMutation,
   useGetMyOrdersQuery,
   useRetryOrderPaymentMutation,
   type OrderPaymentStatus,
@@ -16,6 +17,10 @@ import { formatCurrency } from "@/src/common/helper/formatCurrency";
 import { getAssetUrl } from "@/src/lib/assets";
 import type { CheckoutPayment } from "@/src/common/api/checkout.api";
 import PaymentInstructions from "@/src/features/checkout/components/PaymentInstructions";
+import ProductReviewModal, {
+  type ProductReviewTarget,
+} from "@/src/features/product/components/ProductReviewModal";
+import { useGetMyReviewedOrderItemsQuery } from "@/src/common/api/product-review.api";
 import type { I18nKeys } from "@/src/lib/locale";
 import { useLanguage } from "@/src/lib/locale";
 
@@ -62,10 +67,25 @@ const PurchasePage = () => {
   );
   const [retryOrderPayment, { isLoading: isRetrying }] =
     useRetryOrderPaymentMutation();
+  const [completeMyShopOrder] = useCompleteMyShopOrderMutation();
+  const [completingShopOrderId, setCompletingShopOrderId] = useState<
+    string | null
+  >(null);
+  const [receiptTarget, setReceiptTarget] = useState<{
+    id: string;
+    shopName: string;
+  } | null>(null);
   const [retryPayment, setRetryPayment] = useState<{
     orderNo: string;
     payment: CheckoutPayment;
   } | null>(null);
+  const [reviewTarget, setReviewTarget] =
+    useState<ProductReviewTarget | null>(null);
+  const { data: reviewedOrderItemIds = [] } = useGetMyReviewedOrderItemsQuery(
+    undefined,
+    { skip: !isAuthenticated },
+  );
+  const reviewedOrderItemSet = new Set(reviewedOrderItemIds);
 
   const handleRetryPayment = async (orderId: string, orderNo: string) => {
     try {
@@ -93,6 +113,21 @@ const PurchasePage = () => {
     }
   };
 
+  const handleConfirmReceipt = async () => {
+    if (!receiptTarget) return;
+
+    setCompletingShopOrderId(receiptTarget.id);
+    try {
+      await completeMyShopOrder(receiptTarget.id).unwrap();
+      toast.success(t("pages.purchase.receive.success"));
+      setReceiptTarget(null);
+    } catch {
+      toast.error(t("pages.purchase.receive.error"));
+    } finally {
+      setCompletingShopOrderId(null);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <section className="bg-white p-10 text-center">
@@ -114,6 +149,88 @@ const PurchasePage = () => {
 
   return (
     <section className="space-y-4">
+      {reviewTarget && (
+        <ProductReviewModal
+          key={reviewTarget.orderItemId}
+          target={reviewTarget}
+          onClose={() => setReviewTarget(null)}
+        />
+      )}
+      {receiptTarget && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              completingShopOrderId !== receiptTarget.id
+            ) {
+              setReceiptTarget(null);
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="receive-order-title"
+            className="w-full max-w-md rounded-sm bg-white shadow-xl"
+          >
+            <header className="flex items-start gap-3 border-b border-gray-100 px-5 py-4">
+              <span
+                aria-hidden="true"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-lg font-semibold text-red-primary"
+              >
+                ✓
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2
+                  id="receive-order-title"
+                  className="text-base font-medium text-gray-800"
+                >
+                  {t("pages.purchase.receive.title")}
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {t("pages.purchase.receive.description")}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label={t("pages.purchase.receive.close")}
+                disabled={completingShopOrderId === receiptTarget.id}
+                onClick={() => setReceiptTarget(null)}
+                className="rounded px-2 text-xl leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+              >
+                ×
+              </button>
+            </header>
+            <div className="px-5 py-4">
+              <p className="text-sm text-gray-700">
+                {receiptTarget.shopName}
+              </p>
+            </div>
+            <footer className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4">
+              <button
+                type="button"
+                disabled={completingShopOrderId === receiptTarget.id}
+                onClick={() => setReceiptTarget(null)}
+                className="rounded-sm border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              >
+                {t("pages.purchase.receive.cancel")}
+              </button>
+              <button
+                type="button"
+                disabled={completingShopOrderId === receiptTarget.id}
+                onClick={() => void handleConfirmReceipt()}
+                className="rounded-sm bg-red-primary px-4 py-2 text-sm text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {completingShopOrderId === receiptTarget.id
+                  ? t("pages.purchase.receive.loading")
+                  : t("pages.purchase.receive.confirm-button")}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
       {retryPayment && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -225,10 +342,45 @@ const PurchasePage = () => {
                 <div className="divide-y divide-gray-100">
                   {order.shop_orders.map((shopOrder) => (
                     <section key={shopOrder.id}>
-                      <div className="flex items-center gap-2 px-5 py-3 text-sm text-gray-700">
-                        <span aria-hidden="true">▣</span>
-                        <span>{shopOrder.shop_name}</span>
+                      <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm text-gray-700">
+                        <div className="flex items-center gap-2">
+                          <span aria-hidden="true">▣</span>
+                          <span>{shopOrder.shop_name}</span>
+                          <span className="text-red-primary">
+                            {t(statusTranslationKeys[shopOrder.status])}
+                          </span>
+                        </div>
+                        {shopOrder.status === "shipped" && (
+                          <button
+                            type="button"
+                            disabled={completingShopOrderId === shopOrder.id}
+                            onClick={() =>
+                              setReceiptTarget({
+                                id: shopOrder.id,
+                                shopName: shopOrder.shop_name,
+                              })
+                            }
+                            className="rounded-sm bg-red-primary px-4 py-2 text-xs text-white disabled:opacity-50"
+                          >
+                            {completingShopOrderId === shopOrder.id
+                              ? t("pages.purchase.receive.loading")
+                              : t("pages.purchase.receive.button")}
+                          </button>
+                        )}
                       </div>
+                      {(shopOrder.shippings ?? []).map((shipment) => (
+                        <div
+                          key={shipment.id}
+                          className="px-5 pb-3 text-xs text-gray-500"
+                        >
+                          {shipment.carrier
+                            ? `${t("pages.purchase.shipping.carrier")}: ${shipment.carrier}`
+                            : ""}
+                          {shipment.tracking_number
+                            ? ` · ${t("pages.purchase.shipping.tracking")}: ${shipment.tracking_number}`
+                            : ""}
+                        </div>
+                      ))}
                       {shopOrder.items.map((item) => {
                         const imageUrl = getAssetUrl(item.image_url);
                         return (
@@ -273,6 +425,30 @@ const PurchasePage = () => {
                                   count: item.quantity,
                                 })}
                               </p>
+                              {shopOrder.status === "completed" &&
+                                item.product_id &&
+                                (reviewedOrderItemSet.has(item.id) ? (
+                                  <span className="mt-2 inline-block text-xs text-green-700">
+                                    {t("pages.purchase.review.done")}
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!item.product_id) return;
+                                      setReviewTarget({
+                                        orderItemId: item.id,
+                                        productId: item.product_id,
+                                        productName: item.product_name,
+                                        imageUrl: item.image_url,
+                                        variantLabel: item.variant_label,
+                                      })
+                                    }}
+                                    className="mt-2 text-xs text-red-primary hover:underline"
+                                  >
+                                    {t("pages.purchase.review.button")}
+                                  </button>
+                                ))}
                             </div>
                             <p className="whitespace-nowrap text-sm text-gray-700">
                               ₫{formatCurrency(Number(item.price))}
@@ -287,9 +463,15 @@ const PurchasePage = () => {
                 <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 py-4">
                   <span className="text-sm text-gray-500">
                     {t("pages.purchase.payment-status", {
-                      status: t(
-                        paymentStatusTranslationKeys[order.payment_status],
-                      ),
+                      status:
+                        order.payment_status === "pending" &&
+                        order.status !== "pending_payment"
+                          ? t("pages.purchase.payment.cod_pending")
+                          : t(
+                              paymentStatusTranslationKeys[
+                                order.payment_status
+                              ],
+                            ),
                     })}
                   </span>
                   <p className="text-sm text-gray-700">

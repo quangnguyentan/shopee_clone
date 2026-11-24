@@ -52,8 +52,13 @@ const ProductReviews = ({ productId }: { productId: string }) => {
                 : "border-gray-200 text-gray-700"
             }`}
           >
-            {"★".repeat(value)}
-            {"☆".repeat(5 - value)} (
+              <span className="text-amber-500" aria-hidden="true">
+                {"★".repeat(value)}
+              </span>
+              <span className="text-gray-300" aria-hidden="true">
+                {"☆".repeat(5 - value)}
+              </span>{" "}
+              (
             {data?.rating_breakdown?.[value as 1 | 2 | 3 | 4 | 5] ?? 0})
           </button>
         ))}
@@ -98,22 +103,54 @@ const ProductReviews = ({ productId }: { productId: string }) => {
                       {review.user?.name ?? "Người mua Shopee"}
                     </p>
                     <p
-                      className="mt-1 text-sm tracking-wide text-amber-500"
+                      className="mt-1 text-sm tracking-wide"
                       aria-label={`${review.rating} trên 5 sao`}
                     >
-                      {"★".repeat(review.rating)}
-                      {"☆".repeat(5 - review.rating)}
+                      <span className="text-amber-500" aria-hidden="true">
+                        {"★".repeat(review.rating)}
+                      </span>
+                      <span className="text-gray-300" aria-hidden="true">
+                        {"☆".repeat(5 - review.rating)}
+                      </span>
                     </p>
                     <time
                       dateTime={review.created_at}
                       className="mt-1 block text-xs text-gray-400"
                     >
-                      {new Date(review.created_at).toLocaleDateString("vi-VN")}
+                      {new Intl.DateTimeFormat("vi-VN", {
+                        timeZone: "Asia/Ho_Chi_Minh",
+                      }).format(new Date(review.created_at))}
                     </time>
                     {review.comment && (
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-700">
                         {review.comment}
                       </p>
+                    )}
+                    {review.media_urls?.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {review.media_urls.map((url) => {
+                          const mediaUrl = getAssetUrl(url);
+                          if (!mediaUrl) return null;
+                          return (
+                            <a
+                              key={url}
+                              href={mediaUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="relative size-20 overflow-hidden border border-gray-100"
+                            >
+                              <Image
+                                src={mediaUrl}
+                                alt=""
+                                fill
+                                unoptimized
+                                sizes="80px"
+                                className="object-cover"
+                              />
+                            </a>
+                          );
+                        })}
+                      </div>
                     )}
                     {review.shop_reply && (
                       <div className="mt-3 border-l-2 border-red-200 bg-gray-50 px-3 py-2">

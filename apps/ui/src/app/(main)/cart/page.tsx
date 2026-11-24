@@ -14,6 +14,11 @@ import type { CartItemView } from "@/src/common/api/cart.api";
 import { useAppSelector } from "@/src/common/hooks/useAppSelector";
 import { getAssetUrl } from "@/src/lib/assets";
 import { formatCurrency } from "@/src/common/helper/formatCurrency";
+import {
+  useGetSuggestTodayQuery,
+  useGetTopSoldProductsQuery,
+} from "@/src/common/api/product.api";
+import ProductCard from "@/src/features/home/components/ProductCard";
 
 type PendingQuantityUpdate = {
   desiredQuantity: number;
@@ -37,6 +42,11 @@ const CartPage = () => {
     isLoading,
     isError,
   } = useGetMyCartQuery(undefined, { skip: !isAuthenticated });
+  const { data: suggestedProducts = [] } = useGetSuggestTodayQuery();
+  const { data: topSoldProducts = [] } = useGetTopSoldProductsQuery(
+    undefined,
+    { skip: suggestedProducts.length > 0 },
+  );
   const [removeCartItem, { isLoading: isRemoving }] =
     useRemoveCartItemMutation();
   const [updateCartItem, { isLoading: isUpdating }] =
@@ -85,6 +95,8 @@ const CartPage = () => {
   );
   const allSelected = items.length > 0 && selectedItems.length === items.length;
   const isBusy = isRemoving || isUpdating;
+  const recommendations =
+    suggestedProducts.length > 0 ? suggestedProducts : topSoldProducts;
 
   useEffect(() => {
     if (!isAuthenticated || isLoading || selectionInitialized) return;
@@ -226,23 +238,6 @@ const CartPage = () => {
     router.push(`/checkout?items=${encodeURIComponent(ids.join(","))}`);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <main className="mx-auto max-w-screen-xl px-4 py-16 text-center sm:px-8">
-        <p className="text-gray-700">Đăng nhập để xem giỏ hàng của bạn.</p>
-        <button
-          type="button"
-          onClick={() =>
-            router.push(`/buyer/login?redirect=${encodeURIComponent("/cart")}`)
-          }
-          className="mt-4 rounded-sm bg-red-primary px-6 py-2 text-sm text-white"
-        >
-          Đăng nhập
-        </button>
-      </main>
-    );
-  }
-
   if (isLoading) {
     return (
       <main className="mx-auto max-w-screen-xl px-4 py-12 sm:px-8">
@@ -273,6 +268,14 @@ const CartPage = () => {
       {!items.length ? (
         <section className="bg-white px-4 py-16 text-center">
           <p className="text-gray-600">Giỏ hàng của bạn đang trống.</p>
+          {!isAuthenticated && (
+            <Link
+              href={`/buyer/login?redirect=${encodeURIComponent("/cart")}`}
+              className="mt-2 inline-block text-sm text-red-primary hover:underline"
+            >
+              Đăng nhập để đồng bộ giỏ hàng
+            </Link>
+          )}
           <Link
             href="/"
             className="mt-5 inline-block rounded-sm bg-red-primary px-6 py-2 text-sm text-white"
@@ -318,7 +321,12 @@ const CartPage = () => {
                   <span className="rounded-sm bg-red-primary px-1.5 py-0.5 text-[10px] text-white">
                     Yêu thích
                   </span>
-                  <span className="font-medium">{group.name}</span>
+                  <Link
+                    href={`/shop/${group.id}`}
+                    className="font-medium hover:text-red-primary"
+                  >
+                    {group.name}
+                  </Link>
                 </header>
                 <div className="divide-y divide-gray-100">
                   {group.items.map((item) => {
@@ -488,6 +496,19 @@ const CartPage = () => {
             </div>
           </section>
         </>
+      )}
+
+      {recommendations.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-4 border-b-2 border-red-primary bg-white px-4 py-3 text-lg font-medium uppercase text-gray-800">
+            Có thể bạn cũng thích
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {recommendations.slice(0, 10).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
       )}
 
       {pendingDelete && (

@@ -90,6 +90,7 @@ export class ProductController extends BaseController<Product> {
         mallOnly: query.mall_only,
         discountedOnly: query.discounted_only,
         inStock: query.in_stock,
+        provinceCodes: query.province_codes,
         attributeFilters,
         sort: query.sort,
       },

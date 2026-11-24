@@ -1,5 +1,7 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { Repository } from 'typeorm';
+import { ProductVariant } from '@/product-variant/entities/product-variant.entity';
+import { createProductVariantSignature } from '@/common/utils/product-variant-signature.util';
 import { Product } from './entities/product.entity';
 import { ProductService } from './product.service';
 
@@ -84,6 +86,7 @@ describe('ProductService buyer product filters', () => {
       minRating: 4,
       mallOnly: true,
       inStock: true,
+      provinceCodes: [1, 79],
       attributeFilters: [{ attributeId: '4', valueIds: ['6', '7'] }],
       sort: 'price-asc',
     });
@@ -117,9 +120,17 @@ describe('ProductService buyer product filters', () => {
       5,
       'shop.is_mall = true',
     );
-    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(6, 'p.stock > 0');
+    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
+      6,
+      'shop.province_code IN (:...provinceCodes)',
+      { provinceCodes: [1, 79] },
+    );
     expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
       7,
+      'p.stock > 0',
+    );
+    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
+      8,
       expect.stringContaining('product_variant_attributes'),
       { attributeId0: '4', valueIds0: ['6', '7'] },
     );
@@ -157,6 +168,115 @@ describe('ProductService buyer product detail', () => {
     expect(result.images[0]).toMatchObject({
       id: 'image-1',
       is_primary: true,
+    });
+  });
+
+  describe('ProductService updateFullProduct variants', () => {
+    const blackSignature = createProductVariantSignature([
+      { attributeId: '4', valueId: '8' },
+    ]);
+    const baseProduct = {
+      id: '23',
+      name: 'Jacket',
+      shop: { id: '2', name: 'Shop', user: { id: '12' } },
+      variants: [
+        {
+          id: '93',
+          attribute_signature: blackSignature,
+          sku: 'OLD-SKU',
+          price: 10,
+          stock: 1,
+        },
+      ],
+    };
+    const dto = {
+      shop_id: 2,
+      category_id: 5,
+      name: 'Jacket',
+      description: 'Updated jacket',
+      status: 'active' as const,
+      attributes: [{ name: 'Color', values: ['Black'] }],
+      variants: [{ price: 20, stock: 5 }],
+    };
+
+    const createService = (
+      findOne: jest.Mock,
+      findAttributes = [
+        {
+          id: '4',
+          name: 'Color',
+          type: 'select',
+          values: [
+            { id: '8', value: 'Black' },
+            { id: '9', value: 'White' },
+          ],
+        },
+      ],
+    ) => {
+      const manager: Record<string, jest.Mock> = {
+        findOne,
+        find: jest.fn().mockResolvedValue(findAttributes),
+        save: jest.fn((value) => Promise.resolve(value)),
+        update: jest.fn().mockResolvedValue({ affected: 1 }),
+        merge: jest.fn((_entity, current, updates) => ({
+          ...current,
+          ...updates,
+        })),
+        create: jest.fn((_entity, value) => value),
+        delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      };
+      const repo = {
+        manager: {
+          transaction: jest.fn((callback) => callback(manager)),
+        },
+      };
+      return { service: new ProductService(repo as unknown as Repository<Product>), manager };
+    };
+
+    it('updates a matching variant in place and preserves its flash-sale reference', async () => {
+      const { service, manager } = createService(
+        jest.fn().mockResolvedValueOnce(baseProduct).mockResolvedValueOnce(baseProduct),
+      );
+
+      await service.updateFullProduct(23, { userId: 12, role: 'seller' }, dto);
+
+      expect(manager.update).toHaveBeenCalledWith(
+        ProductVariant,
+        { id: '93' },
+        expect.objectContaining({
+          price: 20,
+          stock: 5,
+          attribute_signature: blackSignature,
+        }),
+      );
+      expect(manager.delete).not.toHaveBeenCalledWith(
+        ProductVariant,
+        expect.anything(),
+      );
+    });
+
+    it('rejects removing a variant that is still linked to a flash sale', async () => {
+      const { service, manager } = createService(
+        jest
+          .fn()
+          .mockResolvedValueOnce(baseProduct)
+          .mockResolvedValueOnce({ id: 'flash-sale-item-1' }),
+      );
+
+      await expect(
+        service.updateFullProduct(23, { userId: 12, role: 'seller' }, {
+          ...dto,
+          attributes: [{ name: 'Color', values: ['White'] }],
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(manager.create).toHaveBeenCalledWith(
+        ProductVariant,
+        expect.objectContaining({ product_id: '23' }),
+      );
+      expect(manager.delete).not.toHaveBeenCalledWith(
+        ProductVariant,
+        expect.anything(),
+      );
     });
   });
 });

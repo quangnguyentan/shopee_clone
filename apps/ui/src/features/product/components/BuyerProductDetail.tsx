@@ -62,12 +62,19 @@ const getApiError = (error: unknown) => {
   return "Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.";
 };
 
-const StarRating = ({ rating }: { rating: number }) => (
-  <span className="tracking-wide text-amber-500" aria-label={`${rating} sao`}>
-    {"★".repeat(Math.max(0, Math.min(5, Math.round(rating))))}
-    {"☆".repeat(5 - Math.max(0, Math.min(5, Math.round(rating))))}
-  </span>
-);
+const StarRating = ({ rating }: { rating: number }) => {
+  const filled = Math.max(0, Math.min(5, Math.round(rating)));
+  return (
+    <span className="tracking-wide" aria-label={`${rating} sao`}>
+      <span className="text-amber-500" aria-hidden="true">
+        {"★".repeat(filled)}
+      </span>
+      <span className="text-gray-300" aria-hidden="true">
+        {"☆".repeat(5 - filled)}
+      </span>
+    </span>
+  );
+};
 
 const BuyerProductDetail = ({ productId }: BuyerProductDetailProps) => {
   const router = useRouter();
@@ -538,15 +545,20 @@ const BuyerProductDetail = ({ productId }: BuyerProductDetailProps) => {
                 Đánh giá shop: {Number(product.shop.rating ?? 0).toFixed(1)} ★
                 {" · "}
                 {product.shop.follower_count ?? 0} người theo dõi
+                {product.shop.province_name && (
+                  <>
+                    {" · "}Gửi từ {product.shop.province_name}
+                  </>
+                )}
               </p>
             </div>
           </div>
-          <a
-            href="#shop-products"
+          <Link
+            href={`/shop/${product.shop.id}`}
             className="border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:border-red-primary hover:text-red-primary"
           >
-            Xem sản phẩm của Shop
-          </a>
+            Xem cửa hàng
+          </Link>
         </section>
       )}
 

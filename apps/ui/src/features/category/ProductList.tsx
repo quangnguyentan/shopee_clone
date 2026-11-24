@@ -13,6 +13,7 @@ import { getAssetUrl } from "@/src/lib/assets";
 import { createShopeeSlug } from "@/src/lib/utils";
 import { formatSold } from "@/src/common/helper/formatSold";
 import { formatCurrency } from "@/src/common/helper/formatCurrency";
+import { MapPin } from "lucide-react";
 import type { CategoryFilters } from "./CategoryCatalog";
 
 type SortOption = "popular" | "latest" | "sales" | "price-asc" | "price-desc";
@@ -86,6 +87,12 @@ const ProductTile = ({ product }: { product: ProductBuyerListItem }) => {
             Đã bán {formatSold(product.sold_count)}
           </span>
         </div>
+        {product.shop?.province_name && (
+          <p className="mt-2 flex min-w-0 items-center gap-1 truncate text-[10px] text-gray-500">
+            <MapPin aria-hidden="true" className="size-3 shrink-0" />
+            <span className="truncate">{product.shop.province_name}</span>
+          </p>
+        )}
       </div>
     </Link>
   );
@@ -107,6 +114,7 @@ const ProductList = ({ categoryId, filters }: ProductListProps) => {
     mallOnly: filters.mallOnly,
     discountedOnly: filters.discountedOnly,
     inStock: filters.inStock,
+    provinceCodes: filters.provinceCodes,
     sort,
     attributeFilters: filters.attributeFilters,
   });

@@ -22,6 +22,7 @@ describe('ProductReviewService ownership', () => {
             product_id: '35',
             rating: 5,
             comment: 'Great',
+            media_urls: ['https://cdn.example.com/review.jpg'],
             shop_reply: null,
             shop_replied_at: null,
             created_at: new Date(),
@@ -124,16 +125,44 @@ describe('ProductReviewService ownership', () => {
         product_id: item.product_variant.product_id,
         rating: 5,
         comment: ' Great ',
+        media_urls: ['https://cdn.example.com/review.jpg'],
       },
       { userId: 12, role: 'buyer' },
     );
 
     expect(reviewManager.save).toHaveBeenCalledWith(
-      expect.objectContaining({ comment: 'Great', user_id: '12' }),
+      expect.objectContaining({
+        comment: 'Great',
+        user_id: '12',
+        media_urls: ['https://cdn.example.com/review.jpg'],
+      }),
     );
     expect(productManager.update).toHaveBeenCalledWith('product-1', {
       rating_count: 1,
       rating_avg: 5,
+    });
+  });
+
+  it('returns only this buyer’s reviewed order item ids', async () => {
+    const reviewRepo = {
+      find: jest.fn().mockResolvedValue([
+        { order_item_id: 'order-item-1' },
+        { order_item_id: null },
+      ]),
+    };
+    const service = new ProductReviewService(
+      reviewRepo as unknown as Repository<ProductReview>,
+      {} as Repository<OrderItem>,
+      {} as Repository<Product>,
+      {} as Repository<Shop>,
+    );
+
+    await expect(service.findMyOrderItemIds(12)).resolves.toEqual([
+      'order-item-1',
+    ]);
+    expect(reviewRepo.find).toHaveBeenCalledWith({
+      where: { user_id: '12' },
+      select: ['order_item_id'],
     });
   });
 

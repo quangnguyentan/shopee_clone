@@ -7,6 +7,8 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsArray,
+  ArrayMaxSize,
   Max,
   MaxLength,
   Min,
@@ -78,4 +80,18 @@ export class BuyerProductsQueryDto extends PaginationDto {
   @IsString()
   @MaxLength(2000)
   attribute_filters?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    return value
+      .split(',')
+      .filter(Boolean)
+      .map(Number);
+  })
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  province_codes?: number[];
 }

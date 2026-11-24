@@ -42,6 +42,7 @@ export type ProductBuyerListItem = Pick<
   images: ProductImageView[];
   display_price: number;
   discount_percent: number | null;
+  shop?: Pick<Shop, "province_name">;
 };
 
 export type ProductDetail = Product & {

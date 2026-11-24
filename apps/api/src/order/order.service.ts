@@ -8,12 +8,13 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import {
   InventoryReservationStatus,
   OrderPaymentStatus,
   OrderStatus,
   PaymentStatus,
+  ShipmentStatus,
   ShopOrderShippingStatus,
   ShopOrderStatus,
 } from '@/common/enums/marketplace.enums';
@@ -30,6 +31,7 @@ import { PaymentService } from '@/payment/payment.service';
 import { Payment } from '@/payment/entities/payment.entity';
 import { Order } from './entities/order.entity';
 import { ShopOrder } from '@/shop-order/entities/shop-order.entity';
+import { Shipping } from '@/shipping/entities/shipping.entity';
 import { PaginationDto } from '@/base/base.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { BuyerOrdersQueryDto } from './dto/buyer-orders-query.dto';
@@ -364,6 +366,7 @@ export class OrderService {
           'shop_orders',
           'shop_orders.shop',
           'shop_orders.items',
+          'shop_orders.shippings',
           'status_history',
         ],
         order: { created_at: 'DESC' },
@@ -383,7 +386,13 @@ export class OrderService {
 
     const [shopOrders, total] = await this.shopOrderRepo.findAndCount({
       where: { shop_id: shop.id },
-      relations: ['order', 'order.buyer', 'items', 'status_history'],
+      relations: [
+        'order',
+        'order.buyer',
+        'items',
+        'status_history',
+        'shippings',
+      ],
       order: { created_at: 'DESC' },
       take: limit,
       skip,
@@ -410,6 +419,7 @@ export class OrderService {
         'shop_orders.shop',
         'shop_orders.items',
         'shop_orders.items.product_variant',
+        'shop_orders.shippings',
       ],
       order: { created_at: 'DESC' },
       take: limit,
@@ -438,6 +448,14 @@ export class OrderService {
           total_amount: shopOrder.total_amount,
           status: shopOrder.status,
           shipping_status: shopOrder.shipping_status,
+          shippings: (shopOrder.shippings ?? []).map((shipping) => ({
+            id: shipping.id,
+            carrier: shipping.carrier,
+            tracking_number: shipping.tracking_number,
+            status: shipping.status,
+            shipped_at: shipping.shipped_at,
+            delivered_at: shipping.delivered_at,
+          })),
           items: (shopOrder.items ?? []).map((item) =>
             this.toSafeItem(item),
           ),
@@ -459,6 +477,7 @@ export class OrderService {
           'shop_orders',
           'shop_orders.shop',
           'shop_orders.items',
+          'shop_orders.shippings',
           'status_history',
         ],
       });
@@ -470,7 +489,13 @@ export class OrderService {
     if (!shop) throw new NotFoundException('Order not found');
     const shopOrders = await this.shopOrderRepo.find({
       where: { order_id: id, shop_id: shop.id },
-      relations: ['order', 'order.buyer', 'items', 'status_history'],
+      relations: [
+        'order',
+        'order.buyer',
+        'items',
+        'status_history',
+        'shippings',
+      ],
     });
     if (shopOrders.length === 0) throw new NotFoundException('Order not found');
 
@@ -576,6 +601,7 @@ export class OrderService {
           'shop_orders',
           'shop_orders.shop',
           'shop_orders.items',
+          'shop_orders.shippings',
           'status_history',
         ],
       });
@@ -589,18 +615,26 @@ export class OrderService {
     dto: UpdateSellerOrderStatusDto,
     actor: OrderManager,
   ) {
-    const shop = await this.findSellerShop(actor.userId);
-    if (!shop) throw new NotFoundException('Order not found');
+    const shop = actor.role === 'seller'
+      ? await this.findSellerShop(actor.userId)
+      : null;
+    if (actor.role === 'seller' && !shop) {
+      throw new NotFoundException('Order not found');
+    }
 
     return this.dataSource.transaction(async (manager) => {
       const shopOrder = await manager.findOne(ShopOrder, {
-        where: { id: shopOrderId, shop_id: shop.id },
+        where: {
+          id: shopOrderId,
+          ...(shop ? { shop_id: shop.id } : {}),
+        },
         relations: [
           'order',
           'order.buyer',
           'items',
           'items.product_variant',
           'status_history',
+          'shippings',
         ],
       });
       if (!shopOrder) throw new NotFoundException('Order not found');
@@ -608,7 +642,6 @@ export class OrderService {
       const nextStatus: Partial<Record<ShopOrderStatus, ShopOrderStatus>> = {
         [ShopOrderStatus.PAID]: ShopOrderStatus.PROCESSING,
         [ShopOrderStatus.PROCESSING]: ShopOrderStatus.SHIPPED,
-        [ShopOrderStatus.SHIPPED]: ShopOrderStatus.COMPLETED,
       };
       if (nextStatus[shopOrder.status] !== dto.status) {
         throw new ConflictException(
@@ -622,6 +655,17 @@ export class OrderService {
         shopOrder.shipping_status = ShopOrderShippingStatus.PREPARING;
       } else if (dto.status === ShopOrderStatus.SHIPPED) {
         shopOrder.shipping_status = ShopOrderShippingStatus.SHIPPED;
+        const shipping = manager.create(Shipping, {
+          shop_order_id: shopOrder.id,
+          address_snapshot: shopOrder.order?.shipping_address ?? null,
+          shipping_fee: shopOrder.shipping_fee,
+          status: ShipmentStatus.SHIPPED,
+          carrier: dto.carrier?.trim() || null,
+          tracking_number: dto.tracking_number?.trim() || null,
+          shipped_at: new Date(),
+        });
+        await manager.save(shipping);
+        shopOrder.shippings = [...(shopOrder.shippings ?? []), shipping];
       } else if (dto.status === ShopOrderStatus.COMPLETED) {
         shopOrder.shipping_status = ShopOrderShippingStatus.DELIVERED;
       }
@@ -653,8 +697,65 @@ export class OrderService {
           to_status: dto.status,
         }),
       );
+      await this.syncParentOrderStatus(
+        manager,
+        shopOrder.order_id,
+        actor.userId,
+      );
 
       return this.toSellerOrder(shopOrder);
+    });
+  }
+
+  async completeMyShopOrder(shopOrderId: string, buyerId: number) {
+    return this.dataSource.transaction(async (manager) => {
+      const shopOrder = await manager.findOne(ShopOrder, {
+        where: { id: shopOrderId },
+        relations: ['order'],
+      });
+      if (
+        !shopOrder ||
+        shopOrder.order?.buyer_id !== String(buyerId)
+      ) {
+        throw new NotFoundException('Order not found');
+      }
+      if (shopOrder.status !== ShopOrderStatus.SHIPPED) {
+        throw new ConflictException(
+          'Only shipped orders can be confirmed as received',
+        );
+      }
+
+      shopOrder.status = ShopOrderStatus.COMPLETED;
+      shopOrder.shipping_status = ShopOrderShippingStatus.DELIVERED;
+      const shipments = await manager.find(Shipping, {
+        where: { shop_order_id: shopOrder.id },
+      });
+      for (const shipment of shipments) {
+        shipment.status = ShipmentStatus.DELIVERED;
+        shipment.delivered_at = new Date();
+        await manager.save(shipment);
+      }
+      await manager.save(shopOrder);
+      await manager.save(
+        manager.create(OrderStatusHistory, {
+          order_id: shopOrder.order_id,
+          shop_order_id: shopOrder.id,
+          actor_user_id: String(buyerId),
+          from_status: ShopOrderStatus.SHIPPED,
+          to_status: ShopOrderStatus.COMPLETED,
+        }),
+      );
+      await this.syncParentOrderStatus(
+        manager,
+        shopOrder.order_id,
+        buyerId,
+      );
+
+      return {
+        id: shopOrder.id,
+        status: shopOrder.status,
+        shipping_status: shopOrder.shipping_status,
+      };
     });
   }
 
@@ -669,6 +770,82 @@ export class OrderService {
       where: { user: { id: String(userId) } },
       select: ['id'],
     });
+  }
+
+  private async syncParentOrderStatus(
+    manager: EntityManager,
+    orderId: string,
+    actorUserId: number,
+  ) {
+    const shopOrders = await manager.find(ShopOrder, {
+      where: { order_id: orderId },
+    });
+    if (shopOrders.length === 0) return;
+
+    const statuses = shopOrders.map((shopOrder) => shopOrder.status);
+    let status: OrderStatus;
+    if (statuses.every((value) => value === ShopOrderStatus.COMPLETED)) {
+      status = OrderStatus.COMPLETED;
+    } else if (
+      statuses.every((value) =>
+        [ShopOrderStatus.SHIPPED, ShopOrderStatus.COMPLETED].includes(value),
+      )
+    ) {
+      status = OrderStatus.SHIPPED;
+    } else if (
+      statuses.some((value) =>
+        [
+          ShopOrderStatus.PROCESSING,
+          ShopOrderStatus.SHIPPED,
+          ShopOrderStatus.COMPLETED,
+        ].includes(value),
+      )
+    ) {
+      status = OrderStatus.PROCESSING;
+    } else if (statuses.every((value) => value === ShopOrderStatus.PAID)) {
+      status = OrderStatus.PAID;
+    } else if (
+      statuses.every((value) => value === ShopOrderStatus.PENDING_PAYMENT)
+    ) {
+      status = OrderStatus.PENDING_PAYMENT;
+    } else if (statuses.every((value) => value === ShopOrderStatus.CANCELLED)) {
+      status = OrderStatus.CANCELLED;
+    } else {
+      status = OrderStatus.PROCESSING;
+    }
+
+    const order = await manager.findOne(Order, { where: { id: orderId } });
+    if (!order || order.status === status) return;
+
+    const previousStatus = order.status;
+    order.status = status;
+    if (
+      status === OrderStatus.COMPLETED &&
+      order.payment_status === OrderPaymentStatus.PENDING
+    ) {
+      const codPayment = await manager.findOne(Payment, {
+        where: {
+          order_id: order.id,
+          method: 'cod',
+          status: PaymentStatus.PENDING,
+        },
+      });
+      if (codPayment) {
+        order.payment_status = OrderPaymentStatus.PAID;
+        codPayment.status = PaymentStatus.SUCCEEDED;
+        codPayment.paid_at = new Date();
+        await manager.save(codPayment);
+      }
+    }
+    await manager.save(order);
+    await manager.save(
+      manager.create(OrderStatusHistory, {
+        order_id: order.id,
+        actor_user_id: String(actorUserId),
+        from_status: previousStatus,
+        to_status: status,
+      }),
+    );
   }
 
   private toSafeBuyer(buyer: Order['buyer']) {
@@ -726,6 +903,14 @@ export class OrderService {
         currency: shopOrder.currency,
         status: shopOrder.status,
         shipping_status: shopOrder.shipping_status,
+        shippings: (shopOrder.shippings ?? []).map((shipping) => ({
+          id: shipping.id,
+          carrier: shipping.carrier,
+          tracking_number: shipping.tracking_number,
+          status: shipping.status,
+          shipped_at: shipping.shipped_at,
+          delivered_at: shipping.delivered_at,
+        })),
         items: (shopOrder.items ?? []).map((item) =>
           this.toSafeItem(item),
         ),
@@ -751,7 +936,16 @@ export class OrderService {
       currency: shopOrder.currency,
       status: shopOrder.status,
       shipping_status: shopOrder.shipping_status,
+      payment_status: order.payment_status,
       shipping_address: order.shipping_address,
+      shippings: (shopOrder.shippings ?? []).map((shipping) => ({
+        id: shipping.id,
+        carrier: shipping.carrier,
+        tracking_number: shipping.tracking_number,
+        status: shipping.status,
+        shipped_at: shipping.shipped_at,
+        delivered_at: shipping.delivered_at,
+      })),
       buyer: this.toSafeBuyer(order.buyer),
       items: (shopOrder.items ?? [])
         .filter((item) => item.shop_id === shopOrder.shop_id)
